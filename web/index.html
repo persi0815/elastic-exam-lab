@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ECE Practice Lab · Kibana Console</title>
+<link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/"><span class="brand-icon">e.</span><span>ECE <strong>PRACTICE LAB</strong></span></a>
+  <span class="native-badge">NATIVE KIBANA</span><span id="version" class="muted">9.3.8</span>
+  <div class="top-actions"><button id="dataBtn">데이터셋</button><button id="guideBtn">사용 안내</button><button id="exportBtn">답안 내보내기 ↗</button></div>
+</header>
+<section class="toolbar">
+  <label for="setSelect">문제 세트</label><select id="setSelect" aria-label="문제 세트"></select>
+  <span id="modeLabel" class="muted">연습 모드</span><span id="timer">03:00:00</span>
+  <button id="examBtn">시험 시작</button><button id="resetBtn" class="quiet">환경 초기화</button>
+</section>
+<div class="statusbar" id="statusbar"><span class="status-dot"></span><span id="statusText">실습 서버 연결 중…</span><span id="engineHealth"></span></div>
+<main class="workspace">
+  <aside id="questionPane">
+    <div class="progress-header"><span>YOUR PROGRESS</span><span id="progressLabel">0 / 10</span></div>
+    <nav id="taskNav" aria-label="문항 이동"></nav>
+    <div class="question-scroll">
+      <span id="taskNo" class="eyebrow"></span><h1 id="taskTitle">문제를 불러오는 중</h1><span id="topic" class="topic"></span>
+      <div class="task-meta"><span>대상</span> <strong id="taskCluster"></strong><span id="kind"></span></div>
+      <p id="intro"></p><h2>요구사항</h2><ol id="requirements"></ol>
+      <div id="datasets" class="chips"></div>
+      <div id="textAnswerBlock" hidden><label for="textAnswer">텍스트 최종 답안</label><input id="textAnswer" placeholder="예: AS, UA"></div>
+      <details id="sourceNotes"><summary>원문과 실습용 보완 사항 <span id="noteCount"></span></summary><div id="notes"></div></details>
+      <a id="sourceLink" target="_blank" rel="noopener" class="source-link">출처 열기 ↗</a>
+      <div class="learning"><button id="hintBtn">힌트</button><button id="solutionBtn">예시 풀이</button></div><div id="hint" hidden></div>
+      <p class="disclaimer">비공식 연습 환경 · 합성 데이터<br>제공 회고의 누락·불일치는 위 보완 사항에 표시합니다.</p>
+    </div>
+    <footer class="question-footer"><button id="flagBtn">⚑ 다시 보기</button><button id="nextBtn">다음 문제 →</button></footer>
+  </aside>
+  <div id="resizer" role="separator" aria-label="문제 영역 너비 조절" tabindex="0"></div>
+  <section class="console-pane">
+    <div class="console-toolbar">
+      <button id="collapseBtn" title="문제 영역 접기">☰</button>
+      <div class="cluster-switch"><button data-cluster="cluster1" class="active">cluster1</button><button data-cluster="cluster2">cluster2</button></div>
+      <span class="console-caption">실제 Dev Tools · 자동완성 / 현재 요청 실행 / JSON 응답</span>
+      <button id="reloadBtn" title="Kibana 새로고침">↻</button><a id="openConsole" target="_blank" rel="noopener">별도 창 ↗</a>
+      <button id="checkBtn" class="primary">답안 검증</button>
+    </div>
+    <div class="console-stage">
+      <div id="loadingConsole" class="loading-console">
+        <span class="loader"></span><h2>실제 Kibana를 준비하고 있습니다</h2>
+        <p id="kibanaStatus">Elasticsearch → 데이터 적재 → Kibana 순서로 시작합니다.</p>
+        <p>편집기 패키지를 브라우저 CDN에서 받지 않습니다.<br>Docker 안에서 실행되는 Kibana Console을 그대로 사용합니다.</p>
+        <code>docker compose logs --tail=80 kibana1 kibana2 app</code>
+      </div>
+      <iframe id="kibanaFrame1" title="cluster1 Kibana Dev Tools Console" allow="clipboard-read; clipboard-write" hidden></iframe>
+      <iframe id="kibanaFrame2" title="cluster2 Kibana Dev Tools Console" allow="clipboard-read; clipboard-write" hidden></iframe>
+    </div>
+    <div class="console-footer"><span><kbd>Ctrl / Cmd</kbd> + <kbd>Enter</kbd> 현재 요청 실행 · <kbd>Ctrl / Cmd</kbd> + <kbd>I</kbd> 정렬</span><button id="notebookBtn">문항별 답안·실행 기록 ▴</button></div>
+    <section id="drawer" class="drawer" hidden>
+      <div class="drawer-heading"><strong id="drawerTitle">답안과 검증</strong><span id="captureState">이 화면의 Console 실행 기록은 현재 문항에 자동 연결됩니다.</span><button id="drawerClose">×</button></div>
+      <div class="drawer-tabs"><button data-panel="validation">검증 결과</button><button data-panel="history">실행 기록</button><button data-panel="notebook">최종 답안 보관</button></div>
+      <div id="validationPanel" class="drawer-panel"><p class="muted">Console에서 요청을 실행한 다음 답안 검증을 누르세요. 공식 채점기는 아닙니다.</p></div>
+      <div id="historyPanel" class="drawer-panel" hidden></div>
+      <div id="notebookPanel" class="drawer-panel" hidden><p class="muted">Kibana의 Console 문서는 클러스터별 작업장입니다. 문항별 최종 스크립트를 별도로 보관하려면 아래에 붙여 넣으세요. 비워두면 마지막 실행 기록으로 검증합니다.</p><textarea id="notebook" spellcheck="false" placeholder="최종 답안 스크립트 (선택)" aria-label="문항별 최종 답안"></textarea><div class="notebook-actions"><button id="captureBtn">실행 기록에서 가져오기</button><button id="copyAnswerBtn">답안 복사</button><button id="clearAnswerBtn">보관 답안 비우기</button></div></div>
+    </section>
+  </section>
+</main>
+<dialog id="modal"><header><h2 id="modalTitle"></h2><button id="modalClose" aria-label="닫기">×</button></header><div id="modalBody"></div><footer id="modalFooter"></footer></dialog>
+<div id="toast" role="status" hidden></div><input id="importFile" type="file" accept="application/json" hidden>
+</body></html>

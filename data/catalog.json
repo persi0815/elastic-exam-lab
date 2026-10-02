@@ -1,0 +1,2221 @@
+{
+  "title": "Elastic Exam Lab",
+  "version": "2.0.0",
+  "engine_version": "9.3.8",
+  "disclaimer": "첨부 회고에 기반한 비공식 로컬 실습 도구. 원본 시험 데이터나 공식 채점기는 포함하지 않습니다. 1,530건은 합성 데이터이고 누락 조건을 명시적으로 보완했습니다. 최신 공식 범위 전체를 나타내지는 않습니다.",
+  "sets": [
+    {
+      "id": "A",
+      "name": "A · 2026.02.26",
+      "description": "10문제 · 상세 회고의 순서와 핵심 조건",
+      "duration_minutes": 180
+    },
+    {
+      "id": "B",
+      "name": "B · 2026.04.14",
+      "description": "10문제 · 3월 회고와 대조해 모호한 부분 표시",
+      "duration_minutes": 180
+    },
+    {
+      "id": "C",
+      "name": "C · 과거 보충 유형",
+      "description": "10문제 · 익명화된 조건을 명시적으로 재구성",
+      "duration_minutes": 180
+    },
+    {
+      "id": "D",
+      "name": "D · 2026.09.19 · 9.X 회고",
+      "description": "10문제 · kNN / article / 기본 pipeline 추가 · 누락 조건 공개",
+      "duration_minutes": 180
+    },
+    {
+      "id": "E",
+      "name": "E · ECE Practice Exam",
+      "description": "첨부 PDF 10문제 · 권한 / 로그 정제 / CCR / searchable snapshot",
+      "duration_minutes": 180
+    },
+    {
+      "id": "F",
+      "name": "F · Elastic 9.x · Semantic / ES|QL / Streams",
+      "description": "직접 제작한 180분 실습 예상 시험 · Semantic Search 3문항, ES|QL 4문항, Kibana Streams 3문항"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "A01",
+      "set": "A",
+      "number": 1,
+      "title": "로그 데이터 스트림과 수명주기",
+      "topic": "ILM · Data stream",
+      "requirements": [
+        "cluster1에 mylogs-*-* 패턴을 갖고 이름이 task1인 index template을 생성한다.",
+        "Hot에서 5분 후 rollover하도록 설정하고, rollover 후 즉시 Warm으로 전환한다.",
+        "Warm에서 3분이 지나면 Cold로 이동하고, rollover 후 6분에 삭제한다.",
+        "mylogs-system.env-prod에 아래 샘플을 색인한다: {\"@timestamp\":\"2022-08-15T01:00:59.123Z\",\"message\":\"This is sample message.\"}"
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          1
+        ],
+        "label": "Task #1",
+        "url": "/sources/recall-2026-02-26.pdf#page=1"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "notes": [
+        "원문 날짜는 2022.08.15T…로 적혀 있다. 여기서는 기본 date 매핑에서 실행 가능하도록 2022-08-15T…로 명시적으로 보정했다.",
+        "Warm/Cold min_age는 rollover 이후 기준으로 연습한다. 실제 전환은 ILM poll 주기에 따라 지연될 수 있다. 6분 후 첫 문서가 삭제돼도 정책 검증은 가능하다.",
+        "실습의 기본 shard/replica 선택은 1/0이다. 원문에는 해당 수가 지정되지 않았다."
+      ],
+      "hint": "정책을 먼저 만들고 template.settings.index.lifecycle.name으로 연결한다. warm/cold의 actions가 비어 있어도 기본 tier migration이 적용된다.",
+      "solution": "PUT _ilm/policy/task1-policy\n{\n  \"policy\": {\n    \"phases\": {\n      \"hot\": {\n        \"actions\": {\n          \"rollover\": {\n            \"max_age\": \"5m\"\n          }\n        }\n      },\n      \"warm\": {\n        \"min_age\": \"0m\",\n        \"actions\": {}\n      },\n      \"cold\": {\n        \"min_age\": \"3m\",\n        \"actions\": {}\n      },\n      \"delete\": {\n        \"min_age\": \"6m\",\n        \"actions\": {\n          \"delete\": {}\n        }\n      }\n    }\n  }\n}\n\nPUT _index_template/task1\n{\n  \"index_patterns\": [\n    \"mylogs-*-*\"\n  ],\n  \"data_stream\": {},\n  \"template\": {\n    \"settings\": {\n      \"index.lifecycle.name\": \"task1-policy\",\n      \"number_of_shards\": 1,\n      \"number_of_replicas\": 0\n    },\n    \"mappings\": {\n      \"properties\": {\n        \"@timestamp\": {\n          \"type\": \"date\"\n        },\n        \"message\": {\n          \"type\": \"text\"\n        }\n      }\n    }\n  }\n}\n\nPOST mylogs-system.env-prod/_doc\n{\n  \"@timestamp\": \"2022-08-15T01:00:59.123Z\",\n  \"message\": \"This is sample message.\"\n}",
+      "kind": "state",
+      "check": "ilm",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A02",
+      "set": "A",
+      "number": 2,
+      "title": "불용어 적용 후 재색인",
+      "topic": "Analyzer · Reindex",
+      "requirements": [
+        "food-ingredients에서 ingredients에 for를 match 검색하면 문서가 검색된다.",
+        "task2를 생성한다. ingredients는 text only, weight는 keyword only로 매핑한다.",
+        "다른 필드의 mapping은 원본과 동일하게 유지하고 모든 문서를 reindex한다.",
+        "task2에서 ingredients에 for를 match 검색하면 0건이어야 한다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          1,
+          2
+        ],
+        "label": "Task #2",
+        "url": "/sources/recall-2026-02-26.pdf#page=1"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "food-ingredients"
+      ],
+      "notes": [],
+      "hint": "원본 _mapping을 확인하고 복사한 뒤 두 필드만 바꾼다. stop token filter를 custom analyzer에 연결한다.",
+      "solution": "PUT task2\n{\n  \"settings\": {\n    \"number_of_replicas\": 0,\n    \"analysis\": {\n      \"analyzer\": {\n        \"task2_analyzer\": {\n          \"type\": \"custom\",\n          \"tokenizer\": \"standard\",\n          \"filter\": [\n            \"lowercase\",\n            \"task2_stop\"\n          ]\n        }\n      },\n      \"filter\": {\n        \"task2_stop\": {\n          \"type\": \"stop\",\n          \"stopwords\": [\n            \"for\"\n          ]\n        }\n      }\n    }\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"name\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"brand\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"manufacturer\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"ingredients\": {\n        \"type\": \"text\",\n        \"analyzer\": \"task2_analyzer\"\n      },\n      \"weight\": {\n        \"type\": \"keyword\"\n      },\n      \"sku\": {\n        \"type\": \"keyword\"\n      },\n      \"calories\": {\n        \"type\": \"integer\"\n      },\n      \"organic\": {\n        \"type\": \"boolean\"\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"food-ingredients\"\n  },\n  \"dest\": {\n    \"index\": \"task2\"\n  }\n}\n\nGET task2/_search\n{\n  \"query\": {\n    \"match\": {\n      \"ingredients\": \"for\"\n    }\n  }\n}",
+      "kind": "state",
+      "check": "stop_food",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A03",
+      "set": "A",
+      "number": 3,
+      "title": "주소 필드 결합",
+      "topic": "Ingest pipeline · Update by query",
+      "requirements": [
+        "inspections의 street_number, street_name, neighborhood, zipcode를 이 순서대로 한 칸 공백으로 연결한다.",
+        "결합한 문자열을 complete_address에 저장한다.",
+        "Ingest pipeline을 생성하고 기존 inspections의 모든 문서에 적용한다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          2,
+          3
+        ],
+        "label": "Task #3",
+        "url": "/sources/recall-2026-02-26.pdf#page=2"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "inspections"
+      ],
+      "notes": [
+        "원문 응시자는 script-only update_by_query를 사용했지만 ingest pipeline 주제라 감점 가능성을 언급했다. 이 실습에서는 pipeline 적용을 요구한다."
+      ],
+      "hint": "set processor의 Mustache 템플릿 또는 script processor를 사용한다. _update_by_query?pipeline=... 로 기존 문서에 적용한다.",
+      "solution": "PUT _ingest/pipeline/address_join_pipeline\n{\n  \"processors\": [\n    {\n      \"set\": {\n        \"field\": \"complete_address\",\n        \"value\": \"{{{street_number}}} {{{street_name}}} {{{neighborhood}}} {{{zipcode}}}\"\n      }\n    }\n  ]\n}\n\nPOST inspections/_update_by_query?pipeline=address_join_pipeline\n\nGET inspections/_search\n{\n  \"size\": 2\n}",
+      "kind": "state",
+      "check": "address",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A04",
+      "set": "A",
+      "number": 4,
+      "title": "주별 평균 비동기 검색",
+      "topic": "Async search · Aggregation",
+      "requirements": [
+        "flights에서 주별(weekly) DistanceInMiles 평균을 구하는 Async Search 요청을 작성한다.",
+        "개별 문서 hits는 반환하지 않는다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          3
+        ],
+        "label": "Task #4",
+        "url": "/sources/recall-2026-02-26.pdf#page=3"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "flights"
+      ],
+      "notes": [],
+      "hint": "날짜 필드는 _mapping에서 확인한다. POST <index>/_async_search와 date_histogram + avg 조합이다.",
+      "solution": "POST flights/_async_search\n{\n  \"size\": 0,\n  \"aggs\": {\n    \"weekly\": {\n      \"date_histogram\": {\n        \"field\": \"FlightDate\",\n        \"calendar_interval\": \"week\"\n      },\n      \"aggs\": {\n        \"average_distance\": {\n          \"avg\": {\n            \"field\": \"DistanceInMiles\"\n          }\n        }\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "weekly",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A05",
+      "set": "A",
+      "number": 5,
+      "title": "손익 런타임 필드와 구간 집계",
+      "topic": "Runtime fields · Range",
+      "requirements": [
+        "movie_data를 검색할 때 revenue - budget을 계산하는 profit runtime field를 만든다.",
+        "profit < 0, 0 ≤ profit < 1,000,000, 1,000,000 ≤ profit의 문서 수를 각각 구한다.",
+        "하나의 검색 요청으로 처리하고 개별 hits는 반환하지 않는다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          3,
+          4
+        ],
+        "label": "Task #5",
+        "url": "/sources/recall-2026-02-26.pdf#page=3"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "movie_data"
+      ],
+      "notes": [
+        "원문의 문제 문장은 1,000,000, 제출 답안은 10,000,000으로 다르다. 이 실습은 문제 문장의 1,000,000을 채택한다."
+      ],
+      "hint": "runtime_mappings → 수치 타입 + emit → range aggregation. from은 포함하고 to는 포함하지 않는다.",
+      "solution": "GET movie_data/_search\n{\n  \"size\": 0,\n  \"runtime_mappings\": {\n    \"profit\": {\n      \"type\": \"long\",\n      \"script\": {\n        \"source\": \"emit(doc['revenue'].value - doc['budget'].value);\"\n      }\n    }\n  },\n  \"aggs\": {\n    \"profit_range\": {\n      \"range\": {\n        \"field\": \"profit\",\n        \"ranges\": [\n          {\n            \"to\": 0\n          },\n          {\n            \"from\": 0,\n            \"to\": 1000000\n          },\n          {\n            \"from\": 1000000\n          }\n        ]\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "profit",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A06",
+      "set": "A",
+      "number": 6,
+      "title": "평균 비행 시간이 긴 항공사",
+      "topic": "Terms · Metric ordering",
+      "requirements": [
+        "flights에서 Airline별 ActualElapsedTime 평균을 구한다.",
+        "평균이 가장 높은 두 Airline 코드를 텍스트 답안 칸에 제출한다. 쿼리만 제출하는 문제가 아니다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          4
+        ],
+        "label": "Task #6",
+        "url": "/sources/recall-2026-02-26.pdf#page=4"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "flights"
+      ],
+      "notes": [
+        "원문 일부는 인덱스를 flight로, 예제 쿼리는 flights로 적었다. 이 실습의 실제 인덱스는 flights다.",
+        "항공사 결과는 제공한 합성 데이터 기준이며 원본 시험 결과를 복원한 것이 아니다."
+      ],
+      "hint": "terms 버킷 내부에 avg를 만들고 그 집계 이름으로 내림차순 정렬한다. 이 실습의 flights는 1 primary shard라 분산 버킷 누락 문제가 없다.",
+      "solution": "GET flights/_search\n{\n  \"size\": 0,\n  \"aggs\": {\n    \"airlines\": {\n      \"terms\": {\n        \"field\": \"Airline\",\n        \"size\": 2,\n        \"shard_size\": 100,\n        \"order\": {\n          \"average_time\": \"desc\"\n        }\n      },\n      \"aggs\": {\n        \"average_time\": {\n          \"avg\": {\n            \"field\": \"ActualElapsedTime\"\n          }\n        }\n      }\n    }\n  }\n}",
+      "kind": "text",
+      "check": "airlines",
+      "answer": "AS, UA",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A07",
+      "set": "A",
+      "number": 7,
+      "title": "일치한 필드 수로 점수 계산",
+      "topic": "Multi-field search · Scoring",
+      "requirements": [
+        "inspections의 category, item, item_description에서 fire를 검색한다.",
+        "세 필드 중 하나 이상이 일치해야 한다.",
+        "각 문서의 _score가 fire가 일치한 필드의 개수(1, 2, 3)와 같아야 한다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          4,
+          5
+        ],
+        "label": "Task #7 (원문 주제: multi match)",
+        "url": "/sources/recall-2026-02-26.pdf#page=4"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "inspections"
+      ],
+      "notes": [
+        "원문 제목은 multi match이지만 결과 조건은 필드 개수와 동일한 점수다. most_fields의 BM25 합은 필드 개수 자체가 아니다. 예시 해설은 constant_score로 결과 조건을 구현했다."
+      ],
+      "hint": "필드별 constant_score(boost=1)를 bool.should로 합한다.",
+      "solution": "GET inspections/_search\n{\n  \"query\": {\n    \"bool\": {\n      \"should\": [\n        {\n          \"constant_score\": {\n            \"filter\": {\n              \"match\": {\n                \"category\": \"fire\"\n              }\n            },\n            \"boost\": 1\n          }\n        },\n        {\n          \"constant_score\": {\n            \"filter\": {\n              \"match\": {\n                \"item\": \"fire\"\n              }\n            },\n            \"boost\": 1\n          }\n        },\n        {\n          \"constant_score\": {\n            \"filter\": {\n              \"match\": {\n                \"item_description\": \"fire\"\n              }\n            },\n            \"boost\": 1\n          }\n        }\n      ],\n      \"minimum_should_match\": 1\n    }\n  }\n}",
+      "kind": "query",
+      "check": "field_count",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A08",
+      "set": "A",
+      "number": 8,
+      "title": "로컬·원격 숙소 동시 검색",
+      "topic": "Cross-cluster search",
+      "requirements": [
+        "cluster1의 listings와 cluster2의 listings2를 하나의 요청으로 검색한다.",
+        "review_scores_rating은 95 이상이어야 한다.",
+        "summary에는 city center가 이 순서의 phrase로 일치해야 한다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          5
+        ],
+        "label": "Task #8",
+        "url": "/sources/recall-2026-02-26.pdf#page=5"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "listings",
+        "cluster2:listings2"
+      ],
+      "notes": [
+        "원문대로 remote alias cluster2 연결은 초기 적재 시 미리 설정된다."
+      ],
+      "hint": "cluster1에서 GET listings,cluster2:listings2/_search. Remote 연결은 GET _remote/info로 확인한다.",
+      "solution": "GET listings,cluster2:listings2/_search\n{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"match_phrase\": {\n            \"summary\": \"city center\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\n          \"range\": {\n            \"review_scores_rating\": {\n              \"gte\": 95\n            }\n          }\n        }\n      ]\n    }\n  }\n}",
+      "kind": "query",
+      "check": "ccs",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A09",
+      "set": "A",
+      "number": 9,
+      "title": "특정 인덱스 스냅샷",
+      "topic": "Snapshot repository",
+      "requirements": [
+        "cluster2에서 /mnt/elastic-snapshots 경로를 사용하는 repository task9를 등록한다.",
+        "city_population 인덱스만 포함하는 city_population_1 snapshot을 만든다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          5
+        ],
+        "label": "Task #9",
+        "url": "/sources/recall-2026-02-26.pdf#page=5"
+      },
+      "cluster": "cluster2",
+      "datasets": [
+        "city_population"
+      ],
+      "notes": [
+        "path.repo와 디렉터리 권한은 Docker 환경에서 사전 설정된다. 스냅샷을 흉내 내지 않고 실제 파일 시스템에 저장한다."
+      ],
+      "hint": "repository(type: fs)를 먼저 등록하고 PUT _snapshot/task9/city_population_1을 호출한다.",
+      "solution": "PUT _snapshot/task9\n{\n  \"type\": \"fs\",\n  \"settings\": {\n    \"location\": \"/mnt/elastic-snapshots\"\n  }\n}\n\nPUT _snapshot/task9/city_population_1?wait_for_completion=true\n{\n  \"indices\": \"city_population\",\n  \"include_global_state\": false\n}\n\nGET _snapshot/task9/city_population_1",
+      "kind": "state",
+      "check": "snapshot",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "A10",
+      "set": "A",
+      "number": 10,
+      "title": "영화 검색과 페이징",
+      "topic": "Sort · Pagination",
+      "requirements": [
+        "movie_data의 title에서 star를 검색한다.",
+        "처음 15개 결과를 건너뛰고 다음 5개만 반환한다.",
+        "revenue 내림차순, 같은 값이면 _score 내림차순으로 정렬한다."
+      ],
+      "source": {
+        "document": "recall-2026-02-26.pdf",
+        "pages": [
+          5,
+          6
+        ],
+        "label": "Task #10",
+        "url": "/sources/recall-2026-02-26.pdf#page=5"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "movie_data"
+      ],
+      "notes": [
+        "원문은 _score 정렬 방향이 불명확하다고 적었다. 이 실습은 첨부 제출 답안처럼 desc를 사용한다."
+      ],
+      "hint": "from:15 / size:5. sort 배열의 순서가 우선순위다.",
+      "solution": "GET movie_data/_search\n{\n  \"from\": 15,\n  \"size\": 5,\n  \"query\": {\n    \"match\": {\n      \"title\": \"star\"\n    }\n  },\n  \"sort\": [\n    {\n      \"revenue\": \"desc\"\n    },\n    {\n      \"_score\": \"desc\"\n    }\n  ]\n}",
+      "kind": "query",
+      "check": "page_movies",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B01",
+      "set": "B",
+      "number": 1,
+      "title": "시가·종가 차이 구간 집계",
+      "topic": "Runtime fields · Range",
+      "requirements": [
+        "stock-prices에서 closing-price - opening-price를 계산하는 difference runtime field를 만든다.",
+        "difference < -5, -5 ≤ difference < 5, 5 ≤ difference의 문서 수를 집계한다.",
+        "한 번의 검색 요청으로 처리하고 개별 문서는 반환하지 않는다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          1,
+          4
+        ],
+        "label": "2026.04.14 Task 1 / 2026.03.23 #1",
+        "url": "/sources/recall-collection.pdf#page=1"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "stock-prices"
+      ],
+      "notes": [
+        "4월 기록에는 Grainger, 5~5 등 표기가 불완전하다. 동일 유형인 3월 23일 기록의 -5/5 경계를 채택한 재구성이다."
+      ],
+      "hint": "실수 차이가 있으므로 double을 사용한다.",
+      "solution": "GET stock-prices/_search\n{\n  \"size\": 0,\n  \"runtime_mappings\": {\n    \"difference\": {\n      \"type\": \"double\",\n      \"script\": {\n        \"source\": \"emit(doc['closing-price'].value - doc['opening-price'].value);\"\n      }\n    }\n  },\n  \"aggs\": {\n    \"difference_ranges\": {\n      \"range\": {\n        \"field\": \"difference\",\n        \"ranges\": [\n          {\n            \"to\": -5\n          },\n          {\n            \"from\": -5,\n            \"to\": 5\n          },\n          {\n            \"from\": 5\n          }\n        ]\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "stock",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B02",
+      "set": "B",
+      "number": 2,
+      "title": "지진 규모 유형 설명 보강",
+      "topic": "Enrich · Ingest · Reindex",
+      "requirements": [
+        "earthquakes의 모든 문서를 새 task2 인덱스로 reindex한다.",
+        "earthquakes.MagnitudeType과 magnitude_type.MagnitudeType을 매칭한다.",
+        "참조 인덱스의 MagnitudeTypeDesc를 가져와 목적지 _source의 최상위 MagnitudeTypeDesc에 저장한다.",
+        "기존 문서 필드는 유지한다. 임시 enrich 객체는 제거한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          1,
+          2,
+          4
+        ],
+        "label": "2026.04.14 Task 2 / 03.23 #2",
+        "url": "/sources/recall-collection.pdf#page=1"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "earthquakes",
+        "magnitude_type"
+      ],
+      "notes": [
+        "원문에 없는 참조 인덱스의 구체 매칭 필드명은 실습용으로 MagnitudeType으로 정했다. 원문은 설명 필드 MagnitudeTypeDesc를 추가하도록 요구한다."
+      ],
+      "hint": "policy 생성 → execute → pipeline → reindex. field는 입력 문서 쪽, match_field는 참조 인덱스 쪽이다. enrich 결과를 최상위로 옮겨야 한다.",
+      "solution": "PUT _enrich/policy/task2-policy\n{\n  \"match\": {\n    \"indices\": \"magnitude_type\",\n    \"match_field\": \"MagnitudeType\",\n    \"enrich_fields\": [\n      \"MagnitudeTypeDesc\"\n    ]\n  }\n}\n\nPUT _enrich/policy/task2-policy/_execute\n\nPUT _ingest/pipeline/task2-pipeline\n{\n  \"processors\": [\n    {\n      \"enrich\": {\n        \"policy_name\": \"task2-policy\",\n        \"field\": \"MagnitudeType\",\n        \"target_field\": \"lookup\",\n        \"ignore_missing\": true\n      }\n    },\n    {\n      \"set\": {\n        \"field\": \"MagnitudeTypeDesc\",\n        \"copy_from\": \"lookup.MagnitudeTypeDesc\",\n        \"ignore_empty_value\": true\n      }\n    },\n    {\n      \"remove\": {\n        \"field\": \"lookup\",\n        \"ignore_missing\": true\n      }\n    }\n  ]\n}\n\nPUT task2\n{\n  \"settings\": {\n    \"number_of_replicas\": 0\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"Date\": {\n        \"type\": \"date\"\n      },\n      \"Magnitude\": {\n        \"type\": \"double\"\n      },\n      \"Depth\": {\n        \"type\": \"double\"\n      },\n      \"MagnitudeType\": {\n        \"type\": \"keyword\"\n      },\n      \"region\": {\n        \"type\": \"keyword\"\n      },\n      \"MagnitudeTypeDesc\": {\n        \"type\": \"keyword\"\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"earthquakes\"\n  },\n  \"dest\": {\n    \"index\": \"task2\",\n    \"pipeline\": \"task2-pipeline\"\n  }\n}",
+      "kind": "state",
+      "check": "enrich",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B03",
+      "set": "B",
+      "number": 3,
+      "title": "영화 매핑 변경과 불용어",
+      "topic": "Analyzer · Reindex",
+      "requirements": [
+        "movie_data를 기반으로 task3 인덱스를 만든다.",
+        "title은 text only, movie_id는 keyword only로 매핑한다.",
+        "나머지 매핑과 문서는 유지한다.",
+        "title에 to를 match 검색하면 0건이 되도록 분석기를 적용한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          2
+        ],
+        "label": "2026.04.14 Task 3",
+        "url": "/sources/recall-collection.pdf#page=2"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "movie_data"
+      ],
+      "notes": [],
+      "hint": "원본 mapping을 복사하고 지정된 두 필드만 변경한다.",
+      "solution": "PUT task3\n{\n  \"settings\": {\n    \"number_of_replicas\": 0,\n    \"analysis\": {\n      \"analyzer\": {\n        \"no_to\": {\n          \"type\": \"custom\",\n          \"tokenizer\": \"standard\",\n          \"filter\": [\n            \"lowercase\",\n            \"stop_to\"\n          ]\n        }\n      },\n      \"filter\": {\n        \"stop_to\": {\n          \"type\": \"stop\",\n          \"stopwords\": [\n            \"to\"\n          ]\n        }\n      }\n    }\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"movie_id\": {\n        \"type\": \"keyword\"\n      },\n      \"title\": {\n        \"type\": \"text\",\n        \"analyzer\": \"no_to\"\n      },\n      \"budget\": {\n        \"type\": \"long\"\n      },\n      \"revenue\": {\n        \"type\": \"long\"\n      },\n      \"tags\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"release_date\": {\n        \"type\": \"date\"\n      },\n      \"rating\": {\n        \"type\": \"double\"\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"movie_data\"\n  },\n  \"dest\": {\n    \"index\": \"task3\"\n  }\n}",
+      "kind": "state",
+      "check": "stop_movies",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B04",
+      "set": "B",
+      "number": 4,
+      "title": "원격 인덱스 복제",
+      "topic": "Cross-cluster replication",
+      "requirements": [
+        "cluster2의 city_populations를 leader로 하여 cluster1에 task4 follower index를 생성한다.",
+        "복제가 따라잡은 뒤 follower의 상태와 문서 수를 확인한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          2
+        ],
+        "label": "2026.04.14 Task 4",
+        "url": "/sources/recall-collection.pdf#page=2"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "cluster2:city_populations"
+      ],
+      "notes": [
+        "두 클러스터에 30일 trial을 자동 활성화한다. 기한이 끝나면 CCR은 유효한 라이선스가 필요하다.",
+        "일반 follow API는 복제를 시작한다. pause 상태일 때만 resume을 사용한다."
+      ],
+      "hint": "요청을 follower 쪽 cluster1에서 실행한다. remote_cluster는 등록된 alias다.",
+      "solution": "PUT task4/_ccr/follow?wait_for_active_shards=1\n{\n  \"remote_cluster\": \"cluster2\",\n  \"leader_index\": \"city_populations\",\n  \"settings\": {\n    \"index.number_of_replicas\": 0\n  }\n}\n\nGET task4/_ccr/info\n\nGET task4/_ccr/stats\n\nGET task4/_count",
+      "kind": "state",
+      "check": "ccr",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B05",
+      "set": "B",
+      "number": 5,
+      "title": "여러 필드의 구문 검색",
+      "topic": "Multi match · Phrase",
+      "requirements": [
+        "food-ingredients를 하나의 요청으로 검색한다.",
+        "name, brand, manufacturer 중 하나의 필드에서 potato chips가 순서대로 인접한 phrase로 일치해야 한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          2
+        ],
+        "label": "2026.04.14 Task 5",
+        "url": "/sources/recall-collection.pdf#page=2"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "food-ingredients"
+      ],
+      "notes": [],
+      "hint": "multi_match의 type:phrase. 서로 다른 필드에 potato/chips가 따로 있는 것은 구문 일치가 아니다.",
+      "solution": "GET food-ingredients/_search\n{\n  \"query\": {\n    \"multi_match\": {\n      \"query\": \"potato chips\",\n      \"fields\": [\n        \"name\",\n        \"brand\",\n        \"manufacturer\"\n      ],\n      \"type\": \"phrase\"\n    }\n  }\n}",
+      "kind": "query",
+      "check": "phrase",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B06",
+      "set": "B",
+      "number": 6,
+      "title": "매시간 스냅샷 정책",
+      "topic": "Snapshot lifecycle management",
+      "requirements": [
+        "cluster2에 이름이 task6인 snapshot lifecycle policy를 생성한다.",
+        "repository는 /mnt/elastic-snapshots를 사용한다.",
+        "이름 패턴은 hourly-snapshots-날짜이며 매시간 0분에 실행한다.",
+        "스냅샷에는 listings2만 포함한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          2,
+          3
+        ],
+        "label": "2026.04.14 Task 6",
+        "url": "/sources/recall-collection.pdf#page=2"
+      },
+      "cluster": "cluster2",
+      "datasets": [
+        "listings2"
+      ],
+      "notes": [
+        "원문에 repository 이름과 날짜 포맷이 명시되어 있지 않아 예시에서는 task6-repo와 {now/d}를 사용한다. 수동 실행은 검증용으로 추가했다."
+      ],
+      "hint": "Quartz cron은 초 필드를 포함한다. 매시 정각: 0 0 * * * ?",
+      "solution": "PUT _snapshot/task6-repo\n{\n  \"type\": \"fs\",\n  \"settings\": {\n    \"location\": \"/mnt/elastic-snapshots\"\n  }\n}\n\nPUT _slm/policy/task6\n{\n  \"schedule\": \"0 0 * * * ?\",\n  \"name\": \"<hourly-snapshots-{now/d}>\",\n  \"repository\": \"task6-repo\",\n  \"config\": {\n    \"indices\": [\n      \"listings2\"\n    ],\n    \"include_global_state\": false\n  }\n}\n\nPOST _slm/policy/task6/_execute\n\nGET _slm/policy/task6",
+      "kind": "state",
+      "check": "slm",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B07",
+      "set": "B",
+      "number": 7,
+      "title": "월별 최대 진도와 깊이",
+      "topic": "Date histogram · Max",
+      "requirements": [
+        "earthquakes의 2012년 데이터만 대상으로 월별 집계를 수행한다.",
+        "각 월별로 Magnitude의 최댓값과 Depth의 최댓값을 각각 구한다.",
+        "개별 hits 없이 집계 결과만 반환한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          3
+        ],
+        "label": "2026.04.14 Task 7",
+        "url": "/sources/recall-collection.pdf#page=3"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "earthquakes"
+      ],
+      "notes": [
+        "원문은 날짜 필드명을 지정하지 않았다. 제공된 실습 데이터에서 날짜 매핑을 확인한다. hits 제외는 실습 출력 형식을 명확히 하기 위해 추가했다."
+      ],
+      "hint": "두 max는 같은 월 버킷 아래 형제 aggregation이다. 가장 큰 진도의 문서에서 깊이를 읽는 문제가 아니다.",
+      "solution": "GET earthquakes/_search\n{\n  \"size\": 0,\n  \"query\": {\n    \"range\": {\n      \"Date\": {\n        \"gte\": \"2012-01-01\",\n        \"lt\": \"2013-01-01\"\n      }\n    }\n  },\n  \"aggs\": {\n    \"months\": {\n      \"date_histogram\": {\n        \"field\": \"Date\",\n        \"calendar_interval\": \"month\"\n      },\n      \"aggs\": {\n        \"max_magnitude\": {\n          \"max\": {\n            \"field\": \"Magnitude\"\n          }\n        },\n        \"max_depth\": {\n          \"max\": {\n            \"field\": \"Depth\"\n          }\n        }\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "monthly",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B08",
+      "set": "B",
+      "number": 8,
+      "title": "메트릭 데이터 스트림 템플릿",
+      "topic": "Index template · Data stream",
+      "requirements": [
+        "cluster1에 mymetrics-*-* 패턴의 data stream용 index template을 만든다. 템플릿 이름은 task8로 한다.",
+        "backing index의 primary shard는 1개, replica는 2개로 설정한다.",
+        "@timestamp는 date, host.name과 tags는 keyword, error.message는 fingerprint analyzer를 사용하는 text로 매핑한다.",
+        "mymetrics-system-prod 데이터 스트림을 실제로 생성한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          3
+        ],
+        "label": "2026.04.14 Task 8",
+        "url": "/sources/recall-collection.pdf#page=3"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "notes": [
+        "원문에는 패턴이 mymetrics--로 훼손되어 있다. 실습용으로 mymetrics-*-*를 채택했다. task8과 mymetrics-system-prod라는 구체 이름도 실습에서 지정한 것이다.",
+        "cluster1은 3개 hot-capable 노드이므로 replica 2개도 배치할 수 있다."
+      ],
+      "hint": "data_stream:{}는 템플릿을 데이터 스트림용으로 선언할 뿐, 생성 자체는 PUT _data_stream/...이다.",
+      "solution": "PUT _index_template/task8\n{\n  \"index_patterns\": [\n    \"mymetrics-*-*\"\n  ],\n  \"data_stream\": {},\n  \"template\": {\n    \"settings\": {\n      \"number_of_shards\": 1,\n      \"number_of_replicas\": 2\n    },\n    \"mappings\": {\n      \"properties\": {\n        \"@timestamp\": {\n          \"type\": \"date\"\n        },\n        \"host\": {\n          \"properties\": {\n            \"name\": {\n              \"type\": \"keyword\"\n            }\n          }\n        },\n        \"tags\": {\n          \"type\": \"keyword\"\n        },\n        \"error\": {\n          \"properties\": {\n            \"message\": {\n              \"type\": \"text\",\n              \"analyzer\": \"fingerprint\"\n            }\n          }\n        }\n      }\n    }\n  }\n}\n\nPUT _data_stream/mymetrics-system-prod",
+      "kind": "state",
+      "check": "metrics",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B09",
+      "set": "B",
+      "number": 9,
+      "title": "점검 내역 검색과 페이지 이동",
+      "topic": "Sort · Pagination",
+      "requirements": [
+        "inspections의 item에서 repair를 검색한다.",
+        "date_filed 내림차순, 동률이면 _score 내림차순으로 정렬한다.",
+        "처음 25개를 건너뛰고 다음 5개를 반환한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          3,
+          5
+        ],
+        "label": "2026.04.14 Task 9 / 03.23 #9",
+        "url": "/sources/recall-collection.pdf#page=3"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "inspections"
+      ],
+      "notes": [
+        "4월 기록의 _score 방향은 생략되어 있어, 3월 기록의 desc를 채택했다."
+      ],
+      "hint": "from:25, size:5. 정렬 대상 field의 매핑을 확인한다.",
+      "solution": "GET inspections/_search\n{\n  \"from\": 25,\n  \"size\": 5,\n  \"query\": {\n    \"match\": {\n      \"item\": \"repair\"\n    }\n  },\n  \"sort\": [\n    {\n      \"date_filed\": \"desc\"\n    },\n    {\n      \"_score\": \"desc\"\n    }\n  ]\n}",
+      "kind": "query",
+      "check": "page_inspections",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "B10",
+      "set": "B",
+      "number": 10,
+      "title": "필수 조건과 추가 점수",
+      "topic": "Bool · Boosting",
+      "requirements": [
+        "movie_data의 title에 me 또는 my가 포함되는 문서를 검색한다.",
+        "tags에 romantic comedy 구문이 포함되면 추가 점수를 준다.",
+        "tags 조건은 필수가 아니며, 해당 구문이 없는 문서도 title 조건을 만족하면 검색되어야 한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          4,
+          5
+        ],
+        "label": "2026.04.14 Task 10 / 03.23 #6",
+        "url": "/sources/recall-collection.pdf#page=4"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "movie_data"
+      ],
+      "notes": [
+        "원문은 tags의 romantic comedy 포함이라고 표현한다. 실습에서는 구문 일치로 구체화했다."
+      ],
+      "hint": "title 조건은 must, 점수 가산 조건은 should. must가 있으면 should의 기본 minimum_should_match는 0이다.",
+      "solution": "GET movie_data/_search\n{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"match\": {\n            \"title\": {\n              \"query\": \"me my\",\n              \"operator\": \"or\"\n            }\n          }\n        }\n      ],\n      \"should\": [\n        {\n          \"match_phrase\": {\n            \"tags\": \"romantic comedy\"\n          }\n        }\n      ]\n    }\n  }\n}",
+      "kind": "query",
+      "check": "boost",
+      "answer": "",
+      "intro": "",
+      "reconstructed": false
+    },
+    {
+      "id": "C01",
+      "set": "C",
+      "number": 1,
+      "title": "노드별 샤드 배치",
+      "topic": "Shard allocation",
+      "requirements": [
+        "legacy-index1의 shard copy들을 node2, node3에만 배치한다.",
+        "legacy-index2는 node1에만 배치한다.",
+        "데이터를 삭제하지 않고 primary/replica 수도 바꾸지 않는다. cluster health를 green으로 유지한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          13,
+          20
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=13"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "legacy-index1",
+        "legacy-index2"
+      ],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다.",
+        "원문은 인덱스 변경 금지의 범위가 모호하다. 여기서는 문서·shard 수는 유지하고 allocation settings 변경은 허용한다. 초기 replica는 각각 1/0이다."
+      ],
+      "hint": "index.routing.allocation.include._name으로 노드 이름을 지정한다.",
+      "solution": "PUT legacy-index1/_settings\n{\n  \"index.routing.allocation.include._name\": \"node2,node3\"\n}\n\nPUT legacy-index2/_settings\n{\n  \"index.routing.allocation.include._name\": \"node1\"\n}\n\nGET _cat/shards/legacy-index*?v\n\nGET _cluster/health",
+      "kind": "state",
+      "check": "allocation",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C02",
+      "set": "C",
+      "number": 2,
+      "title": "새 필드의 동적 매핑 규칙",
+      "topic": "Dynamic templates",
+      "requirements": [
+        "legacy-dynamic 인덱스를 생성한다.",
+        "새 문자열 필드는 keyword only로 매핑한다.",
+        "t_로 시작하는 새 정수 필드는 long으로 매핑한다.",
+        "아래 문서를 색인한다: {\"category_id\":\"A1\",\"t_count\":12,\"label\":\"sample\"}"
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          13,
+          21
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=13"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "dynamic_templates는 배열이며 각 규칙이 별도의 객체다.",
+      "solution": "PUT legacy-dynamic\n{\n  \"mappings\": {\n    \"dynamic_templates\": [\n      {\n        \"integers\": {\n          \"match\": \"t_*\",\n          \"match_mapping_type\": \"long\",\n          \"mapping\": {\n            \"type\": \"long\"\n          }\n        }\n      },\n      {\n        \"strings\": {\n          \"match_mapping_type\": \"string\",\n          \"mapping\": {\n            \"type\": \"keyword\"\n          }\n        }\n      }\n    ]\n  }\n}\n\nPOST legacy-dynamic/_doc\n{\n  \"category_id\": \"A1\",\n  \"t_count\": 12,\n  \"label\": \"sample\"\n}",
+      "kind": "state",
+      "check": "dynamic",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C03",
+      "set": "C",
+      "number": 3,
+      "title": "카테고리 보강 후 최상위로 이동",
+      "topic": "Enrich · Reindex",
+      "requirements": [
+        "blogs의 모든 문서를 legacy-enriched로 복사한다.",
+        "blogs.category와 categories.uid를 매칭해서 categories.title을 새 최상위 필드 category_title에 저장한다.",
+        "기존 category 필드와 임시 lookup 객체를 제거한다. category가 없는 문서도 실패 없이 유지한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          11
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=11"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs",
+        "categories"
+      ],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "ignore_missing으로 없는 참조 키를 처리한다. enrich 결과는 먼저 임시 객체로 받은 뒤 copy_from으로 옮긴다.",
+      "solution": "PUT _enrich/policy/legacy-category\n{\n  \"match\": {\n    \"indices\": \"categories\",\n    \"match_field\": \"uid\",\n    \"enrich_fields\": [\n      \"title\"\n    ]\n  }\n}\n\nPUT _enrich/policy/legacy-category/_execute\n\nPUT _ingest/pipeline/legacy-category\n{\n  \"processors\": [\n    {\n      \"enrich\": {\n        \"policy_name\": \"legacy-category\",\n        \"field\": \"category\",\n        \"target_field\": \"lookup\",\n        \"ignore_missing\": true\n      }\n    },\n    {\n      \"set\": {\n        \"field\": \"category_title\",\n        \"copy_from\": \"lookup.title\",\n        \"ignore_empty_value\": true\n      }\n    },\n    {\n      \"remove\": {\n        \"field\": [\n          \"lookup\",\n          \"category\"\n        ],\n        \"ignore_missing\": true\n      }\n    }\n  ]\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"blogs\"\n  },\n  \"dest\": {\n    \"index\": \"legacy-enriched\",\n    \"pipeline\": \"legacy-category\"\n  }\n}",
+      "kind": "state",
+      "check": "legacy_enrich",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C04",
+      "set": "C",
+      "number": 4,
+      "title": "하이픈과 무하이픈을 동일하게 검색",
+      "topic": "Character filter · Analyzer",
+      "requirements": [
+        "legacy-drinks를 legacy-normalized로 reindex한다.",
+        "name에서 yoo-hoo를 검색하든 yoohoo를 검색하든 두 문서가 모두 검색되도록 한다.",
+        "이름 문자열 자체는 변경하지 않고 analyzer로 구현한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          11,
+          16,
+          24
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=11"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "legacy-drinks"
+      ],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "하이픈을 토큰화 전에 제거하는 mapping char_filter를 구성하고 _analyze로 검증한다.",
+      "solution": "PUT legacy-normalized\n{\n  \"settings\": {\n    \"analysis\": {\n      \"char_filter\": {\n        \"strip_hyphen\": {\n          \"type\": \"mapping\",\n          \"mappings\": [\n            \"- => \"\n          ]\n        }\n      },\n      \"analyzer\": {\n        \"normalized\": {\n          \"type\": \"custom\",\n          \"char_filter\": [\n            \"strip_hyphen\"\n          ],\n          \"tokenizer\": \"standard\",\n          \"filter\": [\n            \"lowercase\"\n          ]\n        }\n      }\n    }\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"name\": {\n        \"type\": \"text\",\n        \"analyzer\": \"normalized\"\n      },\n      \"price\": {\n        \"type\": \"long\"\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"legacy-drinks\"\n  },\n  \"dest\": {\n    \"index\": \"legacy-normalized\"\n  }\n}\n\nGET legacy-normalized/_search\n{\n  \"query\": {\n    \"match\": {\n      \"name\": \"yoo-hoo\"\n    }\n  }\n}",
+      "kind": "state",
+      "check": "normalization",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C05",
+      "set": "C",
+      "number": 5,
+      "title": "같은 저자의 이름과 직책",
+      "topic": "Nested mapping · Query",
+      "requirements": [
+        "blogs를 legacy-nested로 복사하되 authors를 nested로 매핑한다.",
+        "같은 authors 객체에서 first_name이 david이고 job_title에 engineer가 포함된 블로그만 검색한다.",
+        "다른 authors 객체에 나뉘어 조건이 맞는 문서는 제외한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          16,
+          24
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=16"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "object 배열은 관계가 평탄화된다. nested 안에 bool로 두 조건을 함께 넣는다.",
+      "solution": "PUT legacy-nested\n{\n  \"mappings\": {\n    \"properties\": {\n      \"title\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"content\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"summary\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"publish_date\": {\n        \"type\": \"date\"\n      },\n      \"authors\": {\n        \"properties\": {\n          \"uid\": {\n            \"type\": \"keyword\"\n          },\n          \"first_name\": {\n            \"type\": \"text\",\n            \"fields\": {\n              \"keyword\": {\n                \"type\": \"keyword\",\n                \"ignore_above\": 256\n              }\n            }\n          },\n          \"full_name\": {\n            \"type\": \"text\",\n            \"fields\": {\n              \"keyword\": {\n                \"type\": \"keyword\",\n                \"ignore_above\": 256\n              }\n            }\n          },\n          \"job_title\": {\n            \"type\": \"text\",\n            \"fields\": {\n              \"keyword\": {\n                \"type\": \"keyword\",\n                \"ignore_above\": 256\n              }\n            }\n          }\n        },\n        \"type\": \"nested\"\n      },\n      \"category\": {\n        \"type\": \"keyword\"\n      },\n      \"popularity\": {\n        \"type\": \"long\"\n      },\n      \"locale\": {\n        \"type\": \"keyword\"\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"blogs\"\n  },\n  \"dest\": {\n    \"index\": \"legacy-nested\"\n  }\n}\n\nGET legacy-nested/_search\n{\n  \"query\": {\n    \"nested\": {\n      \"path\": \"authors\",\n      \"query\": {\n        \"bool\": {\n          \"must\": [\n            {\n              \"match\": {\n                \"authors.first_name\": \"david\"\n              }\n            },\n            {\n              \"match\": {\n                \"authors.job_title\": \"engineer\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  }\n}",
+      "kind": "mixed",
+      "check": "nested",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C06",
+      "set": "C",
+      "number": 6,
+      "title": "기본값이 있는 검색 템플릿",
+      "topic": "Search template · Mustache",
+      "requirements": [
+        "legacy-search-template라는 stored search template을 만든다.",
+        "blogs의 title에 search, content에 elastic을 검색한다.",
+        "publish_date의 시작/끝을 start_date와 end_date 파라미터로 받는다. end_date를 생략하면 now를 사용한다.",
+        "start_date만 2024-12-01로 지정해 템플릿 검색을 실행한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          10
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=10"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "기본값은 {{^end_date}}now{{/end_date}}. _render/template으로 먼저 렌더링을 확인한다.",
+      "solution": "PUT _scripts/legacy-search-template\n{\n  \"script\": {\n    \"lang\": \"mustache\",\n    \"source\": \"{\\\"query\\\": {\\\"bool\\\": {\\\"must\\\": [{\\\"match\\\": {\\\"title\\\": \\\"search\\\"}}, {\\\"match\\\": {\\\"content\\\": \\\"elastic\\\"}}], \\\"filter\\\": [{\\\"range\\\": {\\\"publish_date\\\": {\\\"gte\\\": \\\"{{start_date}}\\\", \\\"lte\\\": \\\"{{end_date}}{{^end_date}}now{{/end_date}}\\\"}}}]}}}\"\n  }\n}\n\nPOST blogs/_search/template\n{\n  \"id\": \"legacy-search-template\",\n  \"params\": {\n    \"start_date\": \"2024-12-01\"\n  }\n}",
+      "kind": "mixed",
+      "check": "search_template",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C07",
+      "set": "C",
+      "number": 7,
+      "title": "구문 검색과 하이라이트",
+      "topic": "Multi match · Highlight · Sort",
+      "requirements": [
+        "blogs의 title, summary, content 중 하나에 open source가 구문으로 포함된 문서를 검색한다.",
+        "content의 일치 부분을 <strong>과 </strong>으로 감싼 highlight를 반환한다.",
+        "publish_date 오름차순, 동점이면 _score 내림차순으로 정렬한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          11,
+          17,
+          25
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=11"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "highlight.fields에는 검색어가 아니라 필드명을 넣는다.",
+      "solution": "GET blogs/_search\n{\n  \"query\": {\n    \"multi_match\": {\n      \"query\": \"open source\",\n      \"type\": \"phrase\",\n      \"fields\": [\n        \"title\",\n        \"summary\",\n        \"content\"\n      ]\n    }\n  },\n  \"highlight\": {\n    \"fields\": {\n      \"content\": {}\n    },\n    \"pre_tags\": [\n      \"<strong>\"\n    ],\n    \"post_tags\": [\n      \"</strong>\"\n    ]\n  },\n  \"sort\": [\n    {\n      \"publish_date\": \"asc\"\n    },\n    {\n      \"_score\": \"desc\"\n    }\n  ]\n}",
+      "kind": "query",
+      "check": "highlight",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C08",
+      "set": "C",
+      "number": 8,
+      "title": "언어별 멀티필드",
+      "topic": "Multi-fields · Language analyzers",
+      "requirements": [
+        "legacy-language 인덱스에 content:text + standard analyzer를 만든다.",
+        "같은 content에 eng:text + english, nld:text + dutch multi-field를 추가한다.",
+        "문서 {\"content\":\"Running runners and searching systems\"}를 넣는다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          24
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=24"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "properties는 객체의 자식 필드, fields는 같은 원문 값의 추가 색인 방식이다.",
+      "solution": "PUT legacy-language\n{\n  \"mappings\": {\n    \"properties\": {\n      \"content\": {\n        \"type\": \"text\",\n        \"analyzer\": \"standard\",\n        \"fields\": {\n          \"eng\": {\n            \"type\": \"text\",\n            \"analyzer\": \"english\"\n          },\n          \"nld\": {\n            \"type\": \"text\",\n            \"analyzer\": \"dutch\"\n          }\n        }\n      }\n    }\n  }\n}\n\nPOST legacy-language/_doc\n{\n  \"content\": \"Running runners and searching systems\"\n}",
+      "kind": "state",
+      "check": "language",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C09",
+      "set": "C",
+      "number": 9,
+      "title": "역할과 사용자 생성",
+      "topic": "Security · RBAC",
+      "requirements": [
+        "cluster1에 legacy-reader-role을 생성한다. cluster 권한은 monitor다.",
+        "모든 일반 인덱스에는 read, legacy-secure 인덱스에는 all 권한을 준다.",
+        "legacy-student 사용자를 만들고 해당 역할을 부여한다. 비밀번호는 StudyOnly2026!, full_name은 Practice Student다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          15,
+          23
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=15"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다.",
+        "원문의 security 활성화/계정/권한 조건은 구체 값이 없다. 이 환경은 이미 TLS와 인증이 활성화되어 있으며 이 문제는 RBAC API 부분만 재구성했다. Kibana 기능 권한은 이 보충 문제에 포함하지 않는다."
+      ],
+      "hint": "PUT _security/role/... 후 PUT _security/user/.... cluster all과 index all은 다르다.",
+      "solution": "PUT _security/role/legacy-reader-role\n{\n  \"cluster\": [\n    \"monitor\"\n  ],\n  \"indices\": [\n    {\n      \"names\": [\n        \"*\"\n      ],\n      \"privileges\": [\n        \"read\"\n      ]\n    },\n    {\n      \"names\": [\n        \"legacy-secure\"\n      ],\n      \"privileges\": [\n        \"all\"\n      ]\n    }\n  ]\n}\n\nPUT _security/user/legacy-student\n{\n  \"password\": \"StudyOnly2026!\",\n  \"roles\": [\n    \"legacy-reader-role\"\n  ],\n  \"full_name\": \"Practice Student\"\n}",
+      "kind": "state",
+      "check": "rbac",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "C10",
+      "set": "C",
+      "number": 10,
+      "title": "필드 가중치와 점수 합산",
+      "topic": "Most fields · Boost · Sort",
+      "requirements": [
+        "blogs의 title과 content에서 search를 검색한다.",
+        "title에는 boost 3을 부여하고, 두 필드 점수를 합산하는 multi_match 타입을 사용한다.",
+        "popularity 내림차순, 동점이면 _score 내림차순으로 정렬한다."
+      ],
+      "source": {
+        "document": "recall-collection.pdf",
+        "pages": [
+          17,
+          25
+        ],
+        "label": "과거 유형을 바탕으로 재구성",
+        "url": "/sources/recall-collection.pdf#page=17"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "과거 원문은 일부 필드명/값/조건을 생략하거나 a,b,c로 익명화했다. 아래 구체 이름과 테스트 데이터는 실행 가능한 보충 문제를 위해 새로 정한 것이며 실제 기출 원문을 복원한 것이 아니다."
+      ],
+      "hint": "type:most_fields, fields:[\"title^3\",\"content\"].",
+      "solution": "GET blogs/_search\n{\n  \"query\": {\n    \"multi_match\": {\n      \"query\": \"search\",\n      \"fields\": [\n        \"title^3\",\n        \"content\"\n      ],\n      \"type\": \"most_fields\"\n    }\n  },\n  \"sort\": [\n    {\n      \"popularity\": \"desc\"\n    },\n    {\n      \"_score\": \"desc\"\n    }\n  ]\n}",
+      "kind": "query",
+      "check": "most_fields",
+      "answer": "",
+      "intro": "",
+      "reconstructed": true
+    },
+    {
+      "id": "D01",
+      "set": "D",
+      "number": 1,
+      "title": "필터를 적용한 kNN 검색",
+      "topic": "kNN · Pre-filter · Source filtering",
+      "requirements": [
+        "article의 vector.cosine에서 query vector [10, 3, 5, 4, 1, 2]에 가장 가까운 10개 문서를 검색한다.",
+        "KNN Query 내부의 filter를 사용해 tags에 term 값이 있는 문서만 대상으로 한다.",
+        "반환하는 문서 필드는 title과 category만 포함한다."
+      ],
+      "notes": [
+        "회고는 벡터 필드명을 완전히 제공하지 않았다. vector.cosine, 6차원, cosine similarity로 실습 규격을 명시했다.",
+        "회고의 “term”은 이 세트에서 tags의 리터럴 값으로 해석한다. “의미”는 제공 벡터의 유사도로만 계산하며 ML 모델로 만든 임베딩이 아니다.",
+        "회고의 “fields만 반환”은 _source 필터링 또는 _source:false + fields 둘 다 허용한다. _id/_index/_score 같은 응답 메타데이터는 제외 대상이 아니다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #1",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "article"
+      ],
+      "hint": "vector 매핑을 확인하고 query.knn의 filter 안에 tags 조건을 둔다. size와 k는 서로 다른 옵션이다.",
+      "solution": "GET article/_search\n{\n  \"size\": 10,\n  \"_source\": [\n    \"title\",\n    \"category\"\n  ],\n  \"query\": {\n    \"knn\": {\n      \"field\": \"vector.cosine\",\n      \"query_vector\": [\n        10,\n        3,\n        5,\n        4,\n        1,\n        2\n      ],\n      \"k\": 10,\n      \"num_candidates\": 100,\n      \"filter\": {\n        \"term\": {\n          \"tags\": \"term\"\n        }\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "knn",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D02",
+      "set": "D",
+      "number": 2,
+      "title": "지역 참조 정보를 객체로 추가",
+      "topic": "Enrich · Reindex",
+      "requirements": [
+        "article을 task2에 reindex하면서 article.region과 regions.region_id를 매칭한다.",
+        "일치하는 region_id, region_name, description을 region_info 객체에 추가한다.",
+        "기존 region과 나머지 원본 필드는 유지한다."
+      ],
+      "notes": [
+        "원문에 region 인덱스와 regions 인덱스가 혼재한다. 실습 인덱스는 regions로 통일하고 region이라는 검색 alias도 제공한다.",
+        "결과 인덱스명은 원문에서 확인되지 않으므로 task2로 지정했다. ignore_missing 처리는 연습 편의를 위한 방어 코드이며 원문 요구로 단정하지 않는다.",
+        "Enrich는 매 문서마다 live 원본 index를 join하는 것이 아니라 policy execute로 생성한 enrich index를 조회한다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #2",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "article",
+        "regions"
+      ],
+      "hint": "match_field는 참조 인덱스의 region_id, processor.field는 입력 문서의 region이다. region_info에는 match_field도 함께 들어간다.",
+      "solution": "PUT _enrich/policy/d-region-policy\n{\n  \"match\": {\n    \"indices\": \"regions\",\n    \"match_field\": \"region_id\",\n    \"enrich_fields\": [\n      \"region_name\",\n      \"description\"\n    ]\n  }\n}\n\nPUT _enrich/policy/d-region-policy/_execute\n\nPUT _ingest/pipeline/d-region-pipeline\n{\n  \"processors\": [\n    {\n      \"enrich\": {\n        \"policy_name\": \"d-region-policy\",\n        \"field\": \"region\",\n        \"target_field\": \"region_info\",\n        \"ignore_missing\": true\n      }\n    }\n  ]\n}\n\nPUT task2\n{\n  \"settings\": {\n    \"number_of_replicas\": 0,\n    \"index.mapping.exclude_source_vectors\": false\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"article_id\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"title\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"body\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"category\": {\n        \"type\": \"keyword\"\n      },\n      \"tags\": {\n        \"type\": \"keyword\"\n      },\n      \"featured\": {\n        \"type\": \"boolean\"\n      },\n      \"@timestamp\": {\n        \"type\": \"date\"\n      },\n      \"date_time\": {\n        \"type\": \"date\"\n      },\n      \"region\": {\n        \"type\": \"keyword\"\n      },\n      \"a\": {\n        \"type\": \"double\"\n      },\n      \"b\": {\n        \"type\": \"long\"\n      },\n      \"vector\": {\n        \"properties\": {\n          \"cosine\": {\n            \"type\": \"dense_vector\",\n            \"dims\": 6,\n            \"index\": true,\n            \"similarity\": \"cosine\",\n            \"index_options\": {\n              \"type\": \"hnsw\"\n            }\n          }\n        }\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"article\"\n  },\n  \"dest\": {\n    \"index\": \"task2\",\n    \"pipeline\": \"d-region-pipeline\"\n  }\n}",
+      "kind": "state",
+      "check": "article_enrich",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D03",
+      "set": "D",
+      "number": 3,
+      "title": "기사 매핑과 세 불용어",
+      "topic": "Analyzer · Mapping · Reindex",
+      "requirements": [
+        "article의 모든 문서를 task3에 reindex한다. title은 text only, article_id는 keyword only다.",
+        "title 검색에서 to, the, and를 불용어로 처리한다. 다른 필드의 mapping과 데이터는 유지한다.",
+        "초기 article에서 title에 to를 match 검색하면 357건, task3에서는 0건이어야 한다."
+      ],
+      "notes": [
+        "원문에 적힌 357 hits를 재현하도록 480개 합성 문서 중 정확히 357개 title에 to를 넣었다. 실제 시험 데이터가 아니다.",
+        "vector.cosine도 “나머지 매핑”에 포함된다. 원본 _mapping을 조회해서 복사한 뒤 두 필드만 수정한다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #3",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "article"
+      ],
+      "hint": "keyword multi-field만 지우는 것이 아니라 title 자체의 analyzer를 바꿔야 한다. _analyze로 세 단어가 모두 사라지는지 확인한다.",
+      "solution": "GET article/_mapping\n\nPUT task3\n{\n  \"settings\": {\n    \"number_of_replicas\": 0,\n    \"index.mapping.exclude_source_vectors\": false,\n    \"analysis\": {\n      \"analyzer\": {\n        \"article_stop_analyzer\": {\n          \"type\": \"custom\",\n          \"tokenizer\": \"standard\",\n          \"filter\": [\n            \"lowercase\",\n            \"article_stop\"\n          ]\n        }\n      },\n      \"filter\": {\n        \"article_stop\": {\n          \"type\": \"stop\",\n          \"stopwords\": [\n            \"to\",\n            \"the\",\n            \"and\"\n          ]\n        }\n      }\n    }\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"article_id\": {\n        \"type\": \"keyword\"\n      },\n      \"title\": {\n        \"type\": \"text\",\n        \"analyzer\": \"article_stop_analyzer\"\n      },\n      \"body\": {\n        \"type\": \"text\",\n        \"fields\": {\n          \"keyword\": {\n            \"type\": \"keyword\",\n            \"ignore_above\": 256\n          }\n        }\n      },\n      \"category\": {\n        \"type\": \"keyword\"\n      },\n      \"tags\": {\n        \"type\": \"keyword\"\n      },\n      \"featured\": {\n        \"type\": \"boolean\"\n      },\n      \"@timestamp\": {\n        \"type\": \"date\"\n      },\n      \"date_time\": {\n        \"type\": \"date\"\n      },\n      \"region\": {\n        \"type\": \"keyword\"\n      },\n      \"a\": {\n        \"type\": \"double\"\n      },\n      \"b\": {\n        \"type\": \"long\"\n      },\n      \"vector\": {\n        \"properties\": {\n          \"cosine\": {\n            \"type\": \"dense_vector\",\n            \"dims\": 6,\n            \"index\": true,\n            \"similarity\": \"cosine\",\n            \"index_options\": {\n              \"type\": \"hnsw\"\n            }\n          }\n        }\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"article\"\n  },\n  \"dest\": {\n    \"index\": \"task3\"\n  }\n}\n\nGET task3/_search\n{\n  \"query\": {\n    \"match\": {\n      \"title\": \"to\"\n    }\n  }\n}",
+      "kind": "state",
+      "check": "article_stop",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D04",
+      "set": "D",
+      "number": 4,
+      "title": "매시간 Snapshot Lifecycle Policy",
+      "topic": "SLM · Repository",
+      "requirements": [
+        "cluster2에 이름이 task6인 snapshot lifecycle policy를 생성한다.",
+        "repository는 /mnt/elastic-snapshots를 사용한다.",
+        "이름 패턴은 hourly-snapshots-날짜이며 매시간 0분에 실행한다.",
+        "스냅샷에는 listings2만 포함한다."
+      ],
+      "notes": [
+        "사용자 회고가 2026.04.14 Task6과 동일하다고 참조하므로, 원문대로 policy 이름은 task6, 대상은 cluster2의 listings2로 유지했다.",
+        "원문에 repository 이름과 날짜 포맷이 명시되어 있지 않아 예시에서는 task6-repo와 {now/d}를 사용한다. 수동 실행은 검증용으로 추가했다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #4",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster2",
+      "datasets": [
+        "listings2"
+      ],
+      "hint": "Quartz cron은 초 필드를 포함한다. 매시 정각: 0 0 * * * ?",
+      "solution": "PUT _snapshot/task6-repo\n{\n  \"type\": \"fs\",\n  \"settings\": {\n    \"location\": \"/mnt/elastic-snapshots\"\n  }\n}\n\nPUT _slm/policy/task6\n{\n  \"schedule\": \"0 0 * * * ?\",\n  \"name\": \"<hourly-snapshots-{now/d}>\",\n  \"repository\": \"task6-repo\",\n  \"config\": {\n    \"indices\": [\n      \"listings2\"\n    ],\n    \"include_global_state\": false\n  }\n}\n\nPOST _slm/policy/task6/_execute\n\nGET _slm/policy/task6",
+      "kind": "state",
+      "check": "slm",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D05",
+      "set": "D",
+      "number": 5,
+      "title": "데이터 스트림과 backing index 매핑",
+      "topic": "Data stream · Index template",
+      "requirements": [
+        "cluster1에 mymetrics-*-* 패턴의 data stream용 index template을 만든다. 템플릿 이름은 task5로 한다.",
+        "backing index의 primary shard는 1개, replica는 2개로 설정한다.",
+        "@timestamp는 date, host.name과 tags는 keyword, error.message는 fingerprint analyzer를 사용하는 text로 매핑한다.",
+        "mymetrics-system-prod 데이터 스트림을 실제로 생성한다."
+      ],
+      "notes": [
+        "회고에는 “Data stream 생성 = 4/14 Task7”이라고 쓰여 있지만 첨부 PDF의 Task7은 집계, Task8이 Data Stream이다.",
+        "여기서는 회고의 주제(Data stream)를 따라 4/14 Task8을 실습용으로 연결했다. 번호 불일치를 원문 수정 사실처럼 취급하지 않는다.",
+        "원문 누락 패턴과 이름은 mymetrics-*-*, task5, mymetrics-system-prod로 실습 규격을 지정했다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #5",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "hint": "data_stream:{}는 템플릿을 데이터 스트림용으로 선언할 뿐, 생성 자체는 PUT _data_stream/...이다.",
+      "solution": "PUT _index_template/task5\n{\n  \"index_patterns\": [\n    \"mymetrics-*-*\"\n  ],\n  \"data_stream\": {},\n  \"template\": {\n    \"settings\": {\n      \"number_of_shards\": 1,\n      \"number_of_replicas\": 2\n    },\n    \"mappings\": {\n      \"properties\": {\n        \"@timestamp\": {\n          \"type\": \"date\"\n        },\n        \"host\": {\n          \"properties\": {\n            \"name\": {\n              \"type\": \"keyword\"\n            }\n          }\n        },\n        \"tags\": {\n          \"type\": \"keyword\"\n        },\n        \"error\": {\n          \"properties\": {\n            \"message\": {\n              \"type\": \"text\",\n              \"analyzer\": \"fingerprint\"\n            }\n          }\n        }\n      }\n    }\n  }\n}\n\nPUT _data_stream/mymetrics-system-prod",
+      "kind": "state",
+      "check": "d_metrics",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D06",
+      "set": "D",
+      "number": 6,
+      "title": "세 필드의 구문 검색",
+      "topic": "Multi match · Phrase",
+      "requirements": [
+        "food-ingredients를 하나의 요청으로 검색한다.",
+        "name, brand, manufacturer 중 하나의 필드에서 potato chips가 순서대로 인접한 phrase로 일치해야 한다."
+      ],
+      "notes": [
+        "“4/14 Task5와 동일”이라는 명시적 참조를 우선해 food-ingredients/name/brand/manufacturer 및 potato chips를 유지했다.",
+        "“대부분 article 사용”이라는 총평만으로 이 문제까지 article로 바꾸지 않았다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #6",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "food-ingredients"
+      ],
+      "hint": "multi_match의 type:phrase. 서로 다른 필드에 potato/chips가 따로 있는 것은 구문 일치가 아니다.",
+      "solution": "GET food-ingredients/_search\n{\n  \"query\": {\n    \"multi_match\": {\n      \"query\": \"potato chips\",\n      \"fields\": [\n        \"name\",\n        \"brand\",\n        \"manufacturer\"\n      ],\n      \"type\": \"phrase\"\n    }\n  }\n}",
+      "kind": "query",
+      "check": "phrase",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D07",
+      "set": "D",
+      "number": 7,
+      "title": "필수 검색·필터·선택 가산점",
+      "topic": "Bool · Score · Pagination",
+      "requirements": [
+        "article.body에 kubernetes가 필수로 매칭되고 그 조건은 점수에도 반영된다.",
+        "같은 문서의 tags에는 devops가 필수로 포함되지만 이 조건은 점수에 반영하지 않는다.",
+        "featured:true이면 점수를 추가하되 false인 문서도 필수 조건을 만족하면 검색된다.",
+        "date_time 내림차순 정렬 후 20번째 문서부터 5개를 반환한다. 실습에서는 1부터 센 20번째이므로 from:19로 정의한다."
+      ],
+      "notes": [
+        "회고는 “20번 문서부터”라고만 써서 from:19/from:20 해석이 갈린다. UI와 검증은 20번째 포함(from:19)으로 명시했다.",
+        "date_time 정렬 방향은 회고에 없어서 실습에서는 desc를 선택했다. 실제 시험 방향을 확인했다는 의미는 아니다.",
+        "날짜 정렬이 우선이므로 featured 가산점이 날짜 정렬을 앞지를 필요는 없다. track_scores:true는 점수를 관찰하기 위한 예시이며 필수 채점 조건은 아니다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #7",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "article"
+      ],
+      "hint": "must(match) + filter(term) + should(term). “선택적 가산점”을 minimum_should_match:1로 바꾸지 않는다.",
+      "solution": "GET article/_search\n{\n  \"from\": 19,\n  \"size\": 5,\n  \"track_scores\": true,\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"match\": {\n            \"body\": \"kubernetes\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\n          \"term\": {\n            \"tags\": \"devops\"\n          }\n        }\n      ],\n      \"should\": [\n        {\n          \"term\": {\n            \"featured\": true\n          }\n        }\n      ],\n      \"minimum_should_match\": 0\n    }\n  },\n  \"sort\": [\n    {\n      \"date_time\": \"desc\"\n    }\n  ]\n}",
+      "kind": "query",
+      "check": "article_bool",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D08",
+      "set": "D",
+      "number": 8,
+      "title": "OR 검색과 선택적 Boosting",
+      "topic": "Bool · Boosting",
+      "requirements": [
+        "movie_data의 title에 me 또는 my가 포함되는 문서를 검색한다.",
+        "tags에 romantic comedy 구문이 포함되면 추가 점수를 준다.",
+        "tags 조건은 필수가 아니며, 해당 구문이 없는 문서도 title 조건을 만족하면 검색되어야 한다."
+      ],
+      "notes": [
+        "“4/14 Task10과 동일”을 그대로 따라 movie_data/title/me my/tags/romantic comedy를 유지했다. 임의로 article로 치환하지 않았다.",
+        "원문은 tags의 romantic comedy 포함이라고 표현한다. 실습에서는 구문 일치로 구체화했다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #8",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "movie_data"
+      ],
+      "hint": "title 조건은 must, 점수 가산 조건은 should. must가 있으면 should의 기본 minimum_should_match는 0이다.",
+      "solution": "GET movie_data/_search\n{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"match\": {\n            \"title\": {\n              \"query\": \"me my\",\n              \"operator\": \"or\"\n            }\n          }\n        }\n      ],\n      \"should\": [\n        {\n          \"match_phrase\": {\n            \"tags\": \"romantic comedy\"\n          }\n        }\n      ]\n    }\n  }\n}",
+      "kind": "query",
+      "check": "boost",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D09",
+      "set": "D",
+      "number": 9,
+      "title": "빈 인덱스에 기본 Pipeline 연결",
+      "topic": "Grok · Convert · Date · Default pipeline",
+      "requirements": [
+        "ingest-logs는 이미 존재하며 문서 0건, properties 없는 상태가 정상이다. 삭제하거나 재생성하지 않는다.",
+        "이름이 task9인 ingest pipeline을 만들고 ingest-logs의 index.default_pipeline으로 설정한다.",
+        "message 패턴 HTTP <status> ABC <duration>에서 response_status와 duration_ms를 grok으로 추출한다.",
+        "convert processor로 duration_ms를 integer로 변환한다. 인덱스의 duration_ms 매핑도 integer로 명시한다.",
+        "raw_time의 ISO8601 값을 date processor로 파싱하여 @timestamp에 저장하고 원본 raw_time은 제거한다. @timestamp 매핑은 date다.",
+        "pipeline을 명시하지 않은 색인 요청으로 샘플 {\"message\":\"HTTP 200 ABC 125\",\"raw_time\":\"2015-12-31T00:00:00Z\"}를 넣어 기본 pipeline의 적용을 확인한다."
+      ],
+      "notes": [
+        "원문에서 주어진 인덱스명이 빠져 있어 ingest-logs로 보완했다. 초기 mapping/documents는 정말 비어 있다.",
+        "원문 grok은 %{??:duration_ms}로 불완전하고 response_stauts 오타가 있다. 실습 규격은 NUMBER:duration_ms, response_status로 명시했다.",
+        "raw_time 포맷도 생략되어 있어 ISO8601로 지정했다. duration_ms mapping integer 요구와 검증용 샘플은 실습을 위한 보완이다.",
+        "회고의 “빈 인덱스이므로 _simulate가 동작하지 않음”은 일반 API 제약이 아니다. _simulate는 docs에 직접 제공한 샘플로 실행 가능하다. 이 문제는 실제 색인으로 default pipeline 연결까지 검증한다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #9",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "ingest-logs"
+      ],
+      "hint": "pipeline을 만드는 것과 index.default_pipeline 설정은 별개다. 빈 인덱스에도 PUT index/_mapping과 PUT index/_settings를 사용할 수 있다.",
+      "solution": "GET ingest-logs/_mapping\n\nGET ingest-logs/_count\n\nPUT _ingest/pipeline/task9\n{\n  \"processors\": [\n    {\n      \"grok\": {\n        \"field\": \"message\",\n        \"patterns\": [\n          \"^HTTP %{NUMBER:response_status} ABC %{NUMBER:duration_ms}$\"\n        ]\n      }\n    },\n    {\n      \"convert\": {\n        \"field\": \"duration_ms\",\n        \"type\": \"integer\"\n      }\n    },\n    {\n      \"date\": {\n        \"field\": \"raw_time\",\n        \"target_field\": \"@timestamp\",\n        \"formats\": [\n          \"ISO8601\"\n        ]\n      }\n    },\n    {\n      \"remove\": {\n        \"field\": \"raw_time\"\n      }\n    }\n  ]\n}\n\nPUT ingest-logs/_mapping\n{\n  \"properties\": {\n    \"duration_ms\": {\n      \"type\": \"integer\"\n    },\n    \"@timestamp\": {\n      \"type\": \"date\"\n    }\n  }\n}\n\nPUT ingest-logs/_settings\n{\n  \"index.default_pipeline\": \"task9\"\n}\n\nPOST _ingest/pipeline/task9/_simulate\n{\n  \"docs\": [\n    {\n      \"_source\": {\n        \"message\": \"HTTP 200 ABC 125\",\n        \"raw_time\": \"2015-12-31T00:00:00Z\"\n      }\n    }\n  ]\n}\n\nPOST ingest-logs/_doc?refresh=true\n{\n  \"message\": \"HTTP 200 ABC 125\",\n  \"raw_time\": \"2015-12-31T00:00:00Z\"\n}\n\nGET ingest-logs/_search",
+      "kind": "state",
+      "check": "default_pipeline",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "D10",
+      "set": "D",
+      "number": 10,
+      "title": "월별 평균과 최댓값",
+      "topic": "Date histogram · AVG · MAX",
+      "requirements": [
+        "article에서 2012년 데이터를 대상으로 월별 집계를 수행한다.",
+        "각 월에서 a의 평균과 b의 최댓값을 각각 반환한다. 개별 hits는 반환하지 않는다."
+      ],
+      "notes": [
+        "회고는 4/14 Task7과 동일하되 AVG(a), MAX(b)로 변경되었다고만 적었다. a와 b의 실제 필드명은 제공되지 않았다.",
+        "실습은 “대부분 article” 설명을 적용해 article에 숫자 필드 a/b, 날짜 @timestamp를 만들었다. 2012년 제한은 참조한 4/14 Task7에서 가져왔다. 실제 시험의 인덱스/날짜 필드명을 확정한 것이 아니다."
+      ],
+      "source": {
+        "document": "recall-2026-09-19.md",
+        "pages": [],
+        "label": "사용자 제공 2026.09.19 회고 · #10",
+        "url": "/sources/recall-2026-09-19.md"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "article"
+      ],
+      "hint": "같은 date_histogram 버킷의 하위에 avg와 max를 형제 집계로 둔다.",
+      "solution": "GET article/_search\n{\n  \"size\": 0,\n  \"query\": {\n    \"range\": {\n      \"@timestamp\": {\n        \"gte\": \"2012-01-01\",\n        \"lt\": \"2013-01-01\"\n      }\n    }\n  },\n  \"aggs\": {\n    \"months\": {\n      \"date_histogram\": {\n        \"field\": \"@timestamp\",\n        \"calendar_interval\": \"month\"\n      },\n      \"aggs\": {\n        \"avg_a\": {\n          \"avg\": {\n            \"field\": \"a\"\n          }\n        },\n        \"max_b\": {\n          \"max\": {\n            \"field\": \"b\"\n          }\n        }\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "monthly",
+      "answer": "",
+      "intro": "9.X 회고 기반. 실제 시험 데이터가 아닌 재현용 합성 데이터입니다.",
+      "reconstructed": true
+    },
+    {
+      "id": "E01",
+      "set": "E",
+      "number": 1,
+      "title": "사용자와 Default 공간 권한",
+      "topic": "Security · Role · Kibana",
+      "requirements": [
+        "cluster1에 task1 사용자를 생성하고 클러스터 전체 권한을 부여한다.",
+        "모든 일반 인덱스에는 읽기 전용 권한을, task1 인덱스에는 전체 권한을 부여한다.",
+        "Kibana Default 공간의 모든 기능에 전체 권한을 부여한다.",
+        "full_name은 Elastic Search, email은 elastic@search.com, password는 youknowforsearch로 설정한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          4,
+          5
+        ],
+        "label": "ECE Practice Exam · Task 1",
+        "url": "/sources/ece-practice-exam.pdf#page=4"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "notes": [
+        "역할 이름은 원문의 예시처럼 task1_role을 사용한다. 같은 권한을 부여하는 다른 역할 이름도 가능하다.",
+        "Kibana Stack Management → Roles/Users에서 구성할 수도 있다. Console 예시는 이 환경의 Kibana application privilege를 사용한다.",
+        "보안 시스템 인덱스는 일반 인덱스와 다르다. 이 실습은 원문의 일반 인덱스 권한 범위를 검사한다."
+      ],
+      "hint": "클러스터, 인덱스, Kibana 공간 권한은 역할의 서로 다른 항목이다.",
+      "solution": "PUT _security/role/task1_role\n{\n  \"cluster\": [\n    \"all\"\n  ],\n  \"indices\": [\n    {\n      \"names\": [\n        \"*\"\n      ],\n      \"privileges\": [\n        \"read\"\n      ]\n    },\n    {\n      \"names\": [\n        \"task1\"\n      ],\n      \"privileges\": [\n        \"all\"\n      ]\n    }\n  ],\n  \"applications\": [\n    {\n      \"application\": \"kibana-.kibana\",\n      \"privileges\": [\n        \"space_all\"\n      ],\n      \"resources\": [\n        \"space:default\"\n      ]\n    }\n  ]\n}\n\nPUT _security/user/task1\n{\n  \"password\": \"youknowforsearch\",\n  \"roles\": [\n    \"task1_role\"\n  ],\n  \"full_name\": \"Elastic Search\",\n  \"email\": \"elastic@search.com\"\n}\n\nGET _security/user/task1",
+      "kind": "state",
+      "check": "e_security",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E02",
+      "set": "E",
+      "number": 2,
+      "title": "연도별 고유 저자 수",
+      "topic": "Phrase · Date histogram · Cardinality",
+      "requirements": [
+        "blogs의 content에 open source가 이 순서의 구문으로 일치하는 문서만 검색한다.",
+        "publish_date의 달력 연도별로 authors.uid의 고유한 저자 수를 구한다.",
+        "개별 문서 hits는 반환하지 않는다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          5
+        ],
+        "label": "ECE Practice Exam · Task 2",
+        "url": "/sources/ece-practice-exam.pdf#page=5"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "PDF 해설은 authors.uid.keyword를 사용하지만 기존 실습의 authors.uid는 이미 keyword 타입이므로 authors.uid를 집계한다.",
+        "저자 배열의 고유 uid를 세며 블로그 문서 수를 세는 문제가 아니다."
+      ],
+      "hint": "match_phrase → calendar_interval:year → cardinality를 연도 버킷 안에 연결한다.",
+      "solution": "GET blogs/_search\n{\n  \"size\": 0,\n  \"query\": {\n    \"match_phrase\": {\n      \"content\": \"open source\"\n    }\n  },\n  \"aggs\": {\n    \"yearly\": {\n      \"date_histogram\": {\n        \"field\": \"publish_date\",\n        \"calendar_interval\": \"year\"\n      },\n      \"aggs\": {\n        \"unique_authors\": {\n          \"cardinality\": {\n            \"field\": \"authors.uid\"\n          }\n        }\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "e_yearly_authors",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E03",
+      "set": "E",
+      "number": 3,
+      "title": "블로그 분석기와 멀티필드",
+      "topic": "Analyzer · Dynamic template · Reindex",
+      "requirements": [
+        "blogs의 모든 문서를 cluster1의 새 task3 인덱스로 재색인한다.",
+        "content, title, authors.full_name을 제외한 문자열 필드는 keyword only로 매핑한다.",
+        "authors.full_name과 title은 text이며 standard analyzer를 사용한다.",
+        "content는 text이며 content_analyzer(html_strip character filter, standard tokenizer, lowercase token filter)를 사용한다.",
+        "content.eng는 english analyzer를 사용하는 text, title.search는 search_as_you_type 멀티필드로 만든다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          5,
+          6,
+          7
+        ],
+        "label": "ECE Practice Exam · Task 3",
+        "url": "/sources/ece-practice-exam.pdf#page=5"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "문자열 필드는 Elasticsearch의 text/keyword 필드를 뜻한다. PDF 예시처럼 날짜 감지를 유지하므로 publish_date는 date로 매핑된다."
+      ],
+      "hint": "명시한 text 필드는 properties에 정의하고 나머지 새 문자열에는 dynamic_templates를 적용한다.",
+      "solution": "PUT task3\n{\n  \"settings\": {\n    \"number_of_replicas\": 0,\n    \"analysis\": {\n      \"analyzer\": {\n        \"content_analyzer\": {\n          \"type\": \"custom\",\n          \"char_filter\": [\n            \"html_strip\"\n          ],\n          \"tokenizer\": \"standard\",\n          \"filter\": [\n            \"lowercase\"\n          ]\n        }\n      }\n    }\n  },\n  \"mappings\": {\n    \"dynamic_templates\": [\n      {\n        \"strings_as_keywords\": {\n          \"match_mapping_type\": \"string\",\n          \"mapping\": {\n            \"type\": \"keyword\"\n          }\n        }\n      }\n    ],\n    \"properties\": {\n      \"authors\": {\n        \"properties\": {\n          \"full_name\": {\n            \"type\": \"text\",\n            \"analyzer\": \"standard\"\n          }\n        }\n      },\n      \"content\": {\n        \"type\": \"text\",\n        \"analyzer\": \"content_analyzer\",\n        \"fields\": {\n          \"eng\": {\n            \"type\": \"text\",\n            \"analyzer\": \"english\"\n          }\n        }\n      },\n      \"title\": {\n        \"type\": \"text\",\n        \"analyzer\": \"standard\",\n        \"fields\": {\n          \"search\": {\n            \"type\": \"search_as_you_type\"\n          }\n        }\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"blogs\"\n  },\n  \"dest\": {\n    \"index\": \"task3\"\n  }\n}\n\nGET task3/_mapping",
+      "kind": "state",
+      "check": "e_blog_mapping",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E04",
+      "set": "E",
+      "number": 4,
+      "title": "웹 로그 정제와 위치 매핑",
+      "topic": "Ingest · User agent · Geo point",
+      "requirements": [
+        "web_traffic을 새 task4 인덱스로 재색인하며 is_https를 제거한다.",
+        "geoip_location_lat/lon을 geo.location.lat/lon으로 옮기고 geo.location을 geo_point로 매핑한다.",
+        "user_Agent에 user_agent processor를 적용하고 원래 user_Agent 필드는 제거한다.",
+        "@timestamp는 date, runtime_ms와 bytes_sent는 long, 나머지 값 필드는 keyword로 매핑한다.",
+        "task4는 primary shard 6개, replica 0개를 사용한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          7,
+          8,
+          9,
+          10
+        ],
+        "label": "ECE Practice Exam · Task 4",
+        "url": "/sources/ece-practice-exam.pdf#page=7"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "web_traffic"
+      ],
+      "notes": [
+        "PDF 해설의 매핑에는 JSON 쉼표 오류와 예시 로그에 없는 status_code/url이 있다. 실습은 실제 로그의 response/request와 문제의 타입 조건을 따른다.",
+        "user_agent가 생성하는 객체의 문자열 값에도 keyword 동적 템플릿을 적용한다."
+      ],
+      "hint": "목적지 매핑을 먼저 만들고 reindex의 dest.pipeline에 정제 파이프라인을 지정한다.",
+      "solution": "PUT _ingest/pipeline/web_traffic_pipeline\n{\n  \"processors\": [\n    {\n      \"remove\": {\n        \"field\": \"is_https\",\n        \"ignore_missing\": true\n      }\n    },\n    {\n      \"rename\": {\n        \"field\": \"geoip_location_lat\",\n        \"target_field\": \"geo.location.lat\",\n        \"ignore_missing\": true\n      }\n    },\n    {\n      \"rename\": {\n        \"field\": \"geoip_location_lon\",\n        \"target_field\": \"geo.location.lon\",\n        \"ignore_missing\": true\n      }\n    },\n    {\n      \"user_agent\": {\n        \"field\": \"user_Agent\",\n        \"ignore_missing\": true\n      }\n    },\n    {\n      \"remove\": {\n        \"field\": \"user_Agent\",\n        \"ignore_missing\": true\n      }\n    }\n  ]\n}\n\nPUT task4\n{\n  \"settings\": {\n    \"number_of_shards\": 6,\n    \"number_of_replicas\": 0\n  },\n  \"mappings\": {\n    \"dynamic_templates\": [\n      {\n        \"strings_as_keywords\": {\n          \"match_mapping_type\": \"string\",\n          \"mapping\": {\n            \"type\": \"keyword\"\n          }\n        }\n      }\n    ],\n    \"properties\": {\n      \"geo\": {\n        \"properties\": {\n          \"location\": {\n            \"type\": \"geo_point\"\n          }\n        }\n      },\n      \"@timestamp\": {\n        \"type\": \"date\"\n      },\n      \"runtime_ms\": {\n        \"type\": \"long\"\n      },\n      \"bytes_sent\": {\n        \"type\": \"long\"\n      },\n      \"response\": {\n        \"type\": \"keyword\"\n      },\n      \"content_type\": {\n        \"type\": \"keyword\"\n      },\n      \"request\": {\n        \"type\": \"keyword\"\n      },\n      \"verb\": {\n        \"type\": \"keyword\"\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"web_traffic\"\n  },\n  \"dest\": {\n    \"index\": \"task4\",\n    \"pipeline\": \"web_traffic_pipeline\"\n  }\n}\n\nGET task4/_search\n{\n  \"size\": 2\n}",
+      "kind": "state",
+      "check": "e_traffic",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E05",
+      "set": "E",
+      "number": 5,
+      "title": "동일 저자 객체의 이름과 직책",
+      "topic": "Nested · Reindex · Query",
+      "requirements": [
+        "blogs의 모든 문서를 새 task5 인덱스로 재색인하고 authors를 nested로 매핑한다.",
+        "같은 authors 객체에서 first_name이 david이고 job_title에 engineer 토큰이 포함된 블로그를 검색한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          10,
+          11
+        ],
+        "label": "ECE Practice Exam · Task 5",
+        "url": "/sources/ece-practice-exam.pdf#page=10"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "PDF 본문은 task5를 생성하면서 검색 대상을 nested_authors라고 적고, 해설은 task5를 검색한다. 실습은 생성한 task5를 검색한다.",
+        "본문의 first_name 조건을 따른다. PDF 해설은 full_name을 사용한다. 원본의 22건은 복원하지 않았으며 합성 데이터의 결과는 28건이다."
+      ],
+      "hint": "이름과 직책 조건을 같은 nested.query 안에 넣어 서로 다른 저자 사이의 거짓 일치를 제외한다.",
+      "solution": "PUT task5\n{\n  \"settings\": {\n    \"number_of_replicas\": 0\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"authors\": {\n        \"type\": \"nested\"\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"blogs\"\n  },\n  \"dest\": {\n    \"index\": \"task5\"\n  }\n}\n\nGET task5/_search\n{\n  \"query\": {\n    \"nested\": {\n      \"path\": \"authors\",\n      \"query\": {\n        \"bool\": {\n          \"must\": [\n            {\n              \"match\": {\n                \"authors.first_name\": \"david\"\n              }\n            },\n            {\n              \"match\": {\n                \"authors.job_title\": \"engineer\"\n              }\n            }\n          ]\n        }\n      }\n    }\n  }\n}",
+      "kind": "mixed",
+      "check": "e_nested",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E06",
+      "set": "E",
+      "number": 6,
+      "title": "카테고리 정보 보강",
+      "topic": "Enrich · Missing field · Reindex",
+      "requirements": [
+        "blogs를 새 task6 인덱스로 재색인한다.",
+        "blogs.category를 categories.uid에 매칭하여 categories 객체에 uid와 title을 추가한다.",
+        "기존 category 필드를 제거하고 category가 없는 문서도 오류 없이 처리한다.",
+        "나머지 필드와 모든 문서 ID를 유지한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          11,
+          12
+        ],
+        "label": "ECE Practice Exam · Task 6",
+        "url": "/sources/ece-practice-exam.pdf#page=11"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs",
+        "categories"
+      ],
+      "notes": [
+        "PDF의 News 537건은 원본 데이터 기준이다. 이 실습은 84건의 합성 blogs와 category 누락 문서를 사용한다."
+      ],
+      "hint": "policy 생성과 실행을 구분한다. enrich와 remove 모두 ignore_missing으로 누락된 category를 처리한다.",
+      "solution": "PUT _enrich/policy/categories_policy\n{\n  \"match\": {\n    \"indices\": \"categories\",\n    \"match_field\": \"uid\",\n    \"enrich_fields\": [\n      \"title\"\n    ]\n  }\n}\n\nPOST _enrich/policy/categories_policy/_execute\n\nPUT _ingest/pipeline/categories_pipeline\n{\n  \"processors\": [\n    {\n      \"enrich\": {\n        \"field\": \"category\",\n        \"policy_name\": \"categories_policy\",\n        \"target_field\": \"categories\",\n        \"ignore_missing\": true\n      }\n    },\n    {\n      \"remove\": {\n        \"field\": \"category\",\n        \"ignore_missing\": true\n      }\n    }\n  ]\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"blogs\"\n  },\n  \"dest\": {\n    \"index\": \"task6\",\n    \"pipeline\": \"categories_pipeline\"\n  }\n}\n\nGET task6/_search\n{\n  \"query\": {\n    \"match\": {\n      \"categories.title\": \"news\"\n    }\n  }\n}",
+      "kind": "state",
+      "check": "e_categories",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E07",
+      "set": "E",
+      "number": 7,
+      "title": "원격 블로그 인덱스 복제",
+      "topic": "Cross-cluster replication",
+      "requirements": [
+        "cluster2의 blogs를 leader로 하여 cluster1에 ccr_blogs follower를 생성한다.",
+        "복제는 active 상태여야 하며 7건의 문서가 동기화되어야 한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          13,
+          14
+        ],
+        "label": "ECE Practice Exam · Task 7",
+        "url": "/sources/ece-practice-exam.pdf#page=13"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "cluster2:blogs"
+      ],
+      "notes": [
+        "기존 Docker 환경의 cluster2 연결을 사용하며 E 세트 초기화 때 cluster2에 합성 blogs 7건을 준비한다.",
+        "일반 follow API는 복제를 시작한다. 이미 pause한 follower에만 resume_follow를 사용한다.",
+        "CCR에는 유효한 라이선스가 필요하다. 이 Docker 환경은 기존 trial을 사용한다."
+      ],
+      "hint": "follower를 만들 요청은 cluster1 Console에서 실행한다.",
+      "solution": "GET _remote/info\n\nPUT ccr_blogs/_ccr/follow?wait_for_active_shards=1\n{\n  \"remote_cluster\": \"cluster2\",\n  \"leader_index\": \"blogs\",\n  \"settings\": {\n    \"index.number_of_replicas\": 0\n  }\n}\n\nGET ccr_blogs/_ccr/info\n\nGET ccr_blogs/_count",
+      "kind": "state",
+      "check": "e_ccr",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E08",
+      "set": "E",
+      "number": 8,
+      "title": "시간 기반 메트릭 데이터 스트림",
+      "topic": "ILM · Component template · Data stream",
+      "requirements": [
+        "cluster1에 my.metrics-system-dev 데이터 스트림을 생성한다.",
+        "Hot에서 최대 2분에 rollover하고 rollover 직후 Warm에서 read-only로 만든다.",
+        "rollover 후 3분에 Cold로 이동하며 삭제 단계 없이 유지한다.",
+        "my-metrics-template 템플릿은 준비된 metrics-mappings component template과 my-metrics-policy를 사용한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          14,
+          15,
+          16
+        ],
+        "label": "ECE Practice Exam · Task 8",
+        "url": "/sources/ece-practice-exam.pdf#page=14"
+      },
+      "cluster": "cluster1",
+      "datasets": [],
+      "notes": [
+        "PDF 본문 metrics-mapping과 해설 metrics-mappings의 표기가 다르다. 실습에서 준비된 이름은 metrics-mappings다.",
+        "PDF 템플릿 이름도 혼재하므로 my-metrics-template으로 통일한다. Cold min_age는 rollover 이후 기준이다.",
+        "빈 스트림은 기본 ILM 설정에서 자동 rollover하지 않는다. 시간 전환을 관찰하려면 @timestamp가 있는 샘플 문서를 별도로 넣는다. 자동 검증은 정책·연결·스트림을 확인한다."
+      ],
+      "hint": "ILM 정책 → component를 포함한 index template → 실제 data stream 순서로 생성한다.",
+      "solution": "GET _component_template/metrics-mappings\n\nPUT _ilm/policy/my-metrics-policy\n{\n  \"policy\": {\n    \"phases\": {\n      \"hot\": {\n        \"actions\": {\n          \"rollover\": {\n            \"max_age\": \"2m\"\n          }\n        }\n      },\n      \"warm\": {\n        \"min_age\": \"0m\",\n        \"actions\": {\n          \"readonly\": {}\n        }\n      },\n      \"cold\": {\n        \"min_age\": \"3m\",\n        \"actions\": {}\n      }\n    }\n  }\n}\n\nPUT _index_template/my-metrics-template\n{\n  \"index_patterns\": [\n    \"my.metrics-*-*\"\n  ],\n  \"data_stream\": {},\n  \"composed_of\": [\n    \"metrics-mappings\"\n  ],\n  \"priority\": 500,\n  \"template\": {\n    \"settings\": {\n      \"index.lifecycle.name\": \"my-metrics-policy\",\n      \"number_of_shards\": 1,\n      \"number_of_replicas\": 0\n    }\n  }\n}\n\nPUT _data_stream/my.metrics-system-dev",
+      "kind": "state",
+      "check": "e_stream",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E09",
+      "set": "E",
+      "number": 9,
+      "title": "스냅샷 마운트와 검색",
+      "topic": "Repository · Searchable snapshot",
+      "requirements": [
+        "cluster1에 이름이 snap-repo인 fs repository를 /mnt/elastic-snapshots/ece-practice-search에 등록한다.",
+        "이미 준비된 moreblogs_snapshot에는 moreblogs만 있다. searchable snapshot으로 moreblogs를 마운트한다.",
+        "moreblogs에서 tags.product에 elasticsearch가 일치하는 블로그를 검색한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          16,
+          17
+        ],
+        "label": "ECE Practice Exam · Task 9",
+        "url": "/sources/ece-practice-exam.pdf#page=16"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "moreblogs"
+      ],
+      "notes": [
+        "PDF 경로 /var/tmp/repo/search는 현재 Docker의 path.repo에 맞춰 /mnt/elastic-snapshots/ece-practice-search로 변경했다.",
+        "E 세트 초기화는 합성 moreblogs 24건의 실제 스냅샷을 준비한 뒤 원본 인덱스와 repository 등록을 제거한다. 저장된 스냅샷 파일을 다시 등록·마운트하는 문제다.",
+        "합성 데이터에서 elasticsearch 매칭은 22건이다. searchable snapshots에는 유효한 라이선스가 필요하다."
+      ],
+      "hint": "일반 restore 대신 _mount를 사용한 뒤 마운트한 인덱스를 검색한다.",
+      "solution": "PUT _snapshot/snap-repo\n{\n  \"type\": \"fs\",\n  \"settings\": {\n    \"location\": \"/mnt/elastic-snapshots/ece-practice-search\"\n  }\n}\n\nGET _snapshot/snap-repo/moreblogs_snapshot\n\nPOST _snapshot/snap-repo/moreblogs_snapshot/_mount?wait_for_completion=true\n{\n  \"index\": \"moreblogs\",\n  \"index_settings\": {\n    \"index.number_of_replicas\": 0\n  }\n}\n\nGET moreblogs/_search\n{\n  \"query\": {\n    \"match\": {\n      \"tags.product\": \"elasticsearch\"\n    }\n  }\n}",
+      "kind": "mixed",
+      "check": "e_searchable",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "E10",
+      "set": "E",
+      "number": 10,
+      "title": "최근 인증 관련 블로그와 페이징",
+      "topic": "Relevance · Date math · Highlight",
+      "requirements": [
+        "blogs의 content에서 certified engineer를 검색한다. 기본 match OR 의미로 검색한다.",
+        "content에 certified engineer가 이 순서의 구문으로 일치하면 점수를 추가한다.",
+        "최근 2년부터 현재까지 발행된 블로그만 반환한다.",
+        "_score 내림차순, 동률이면 _doc 오름차순으로 정렬한다.",
+        "페이지당 5건인 3번째 페이지를 반환하고 content의 검색어를 highlight한다."
+      ],
+      "source": {
+        "document": "ece-practice-exam.pdf",
+        "pages": [
+          17,
+          18
+        ],
+        "label": "ECE Practice Exam · Task 10",
+        "url": "/sources/ece-practice-exam.pdf#page=17"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "blogs"
+      ],
+      "notes": [
+        "E 세트에서는 기존 blogs의 날짜 연도만 2025로 바꾼 별도 합성 fixture를 사용한다. 2026년 10월 기준 3번째 페이지가 존재하며 A–D 원본 fixture는 유지한다.",
+        "최근 2년은 실행 시각을 기준으로 평가한다. 시간이 지나면 결과 수가 달라질 수 있다.",
+        "_doc는 내부 문서 순서다. 자동 검증은 완전히 동률인 문서에 특정 ID 순서를 강제하지 않는다."
+      ],
+      "hint": "필수 match, 선택적 match_phrase, 날짜 filter를 나누고 from:10 / size:5를 사용한다.",
+      "solution": "GET blogs/_search\n{\n  \"from\": 10,\n  \"size\": 5,\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"match\": {\n            \"content\": \"certified engineer\"\n          }\n        }\n      ],\n      \"should\": [\n        {\n          \"match_phrase\": {\n            \"content\": \"certified engineer\"\n          }\n        }\n      ],\n      \"filter\": [\n        {\n          \"range\": {\n            \"publish_date\": {\n              \"gte\": \"now-2y/d\",\n              \"lte\": \"now\"\n            }\n          }\n        }\n      ]\n    }\n  },\n  \"sort\": [\n    {\n      \"_score\": \"desc\"\n    },\n    {\n      \"_doc\": \"asc\"\n    }\n  ],\n  \"highlight\": {\n    \"fields\": {\n      \"content\": {}\n    }\n  }\n}",
+      "kind": "query",
+      "check": "e_certified",
+      "answer": "",
+      "intro": "첨부 ECE Practice Exam의 조건을 현재 Docker 실습 환경에 맞춘 문항입니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "F01",
+      "set": "F",
+      "number": 1,
+      "title": "사전 계산한 embedding을 검색 가능한 벡터로 색인",
+      "topic": "Semantic Search · Dense vector · Reindex",
+      "requirements": [
+        "f-semantic-source의 32건을 새 f-semantic-target으로 재색인하고 모든 문서 ID와 필드를 보존한다.",
+        "embedding을 dims:384, index:true, similarity:cosine인 dense_vector로 매핑한다. 원본 배열을 보존하도록 index.mapping.exclude_source_vectors:false를 생성 시 설정한다.",
+        "title/content는 text, category/language/vector_model은 keyword, published는 boolean으로 매핑한다.",
+        "f-semantic-target의 primary shard는 1개, replica는 0개다. 기존 f-semantic-corpus는 변경하지 않는다."
+      ],
+      "datasets": [
+        "f-semantic-source"
+      ],
+      "solution": "PUT f-semantic-target\n{\n  \"settings\": {\n    \"number_of_shards\": 1,\n    \"number_of_replicas\": 0,\n    \"index.mapping.exclude_source_vectors\": false\n  },\n  \"mappings\": {\n    \"properties\": {\n      \"title\": {\n        \"type\": \"text\"\n      },\n      \"content\": {\n        \"type\": \"text\"\n      },\n      \"category\": {\n        \"type\": \"keyword\"\n      },\n      \"language\": {\n        \"type\": \"keyword\"\n      },\n      \"published\": {\n        \"type\": \"boolean\"\n      },\n      \"vector_model\": {\n        \"type\": \"keyword\"\n      },\n      \"embedding\": {\n        \"type\": \"dense_vector\",\n        \"dims\": 384,\n        \"index\": true,\n        \"similarity\": \"cosine\",\n        \"index_options\": {\n          \"type\": \"hnsw\"\n        }\n      }\n    }\n  }\n}\n\nPOST _reindex\n{\n  \"source\": {\n    \"index\": \"f-semantic-source\"\n  },\n  \"dest\": {\n    \"index\": \"f-semantic-target\"\n  }\n}\n\nGET f-semantic-target/_mapping\n\nGET f-semantic-target/_count",
+      "kind": "state",
+      "check": "f_semantic_mapping",
+      "cluster": "cluster1",
+      "answer": "",
+      "notes": [
+        "작성한 합성 안내문을 sentence-transformers/all-MiniLM-L6-v2(1110a243fdf4, Apache-2.0)로 실제 인코딩한 384차원 벡터다. 평균 pooling과 L2 정규화를 적용했다. 모델의 품질을 공식 시험 점수로 평가하는 문항은 아니다.",
+        "이 Docker는 ML 노드가 꺼져 있다. 문서·질의 embedding은 이미 준비되어 있으며 모델 다운로드나 외부 inference API 없이 검색한다. semantic_text의 자동 inference 설정은 이 실습 범위에 포함하지 않는다.",
+        "작은 32건 corpus는 양자화하지 않은 HNSW로 준비했다. 자동 검증은 실제 벡터·RRF 검색 결과를 확인하며 대규모 데이터의 ANN recall을 보장하는 벤치마크가 아니다.",
+        "이 문제는 이미 계산된 벡터를 올바르게 저장하는 문제다. text를 dense_vector로 자동 변환하거나 벡터를 임의로 바꾸지 않는다."
+      ],
+      "hint": "일반 float 배열과 dense_vector는 다르다. 목적지 매핑과 벡터 _source 설정을 먼저 만든다.",
+      "reconstructed": false,
+      "intro": "실제 Elasticsearch 9.3.8에서 실행하는 자체 제작 모의 문항입니다. 공식 기출 복원본이 아닙니다.",
+      "source": {
+        "document": null,
+        "pages": [],
+        "label": "Elastic dense_vector 공식 문서",
+        "url": "https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/dense-vector"
+      },
+      "references": [
+        {
+          "label": "Elastic dense_vector 공식 문서",
+          "url": "https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/dense-vector"
+        },
+        {
+          "label": "Embedding 모델과 라이선스",
+          "url": "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
+        },
+        {
+          "label": "semantic_text와 inference 범위",
+          "url": "https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/semantic-text-reference"
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "set": "F",
+      "number": 2,
+      "title": "메타데이터를 먼저 제한하는 의미 기반 kNN 검색",
+      "topic": "Semantic Search · kNN · Pre-filter",
+      "requirements": [
+        "f-semantic-corpus에서 질의 \"Find help diagnosing slow searches and improving query response times.\"의 준비된 embedding을 사용한다. GET f-semantic-queries/_doc/latency의 embedding 배열을 query_vector에 넣는다.",
+        "category:search, language:en, published:true 세 조건을 kNN 내부 pre-filter에 넣는다. 검색 후 post_filter로 제한하는 풀이로 대체하지 않는다.",
+        "embedding 필드에 k:5, num_candidates:32를 설정하고 size:5로 유사도가 높은 5건을 반환한다.",
+        "각 hit의 문서 필드는 title과 category만 반환하며 embedding과 content는 반환하지 않는다."
+      ],
+      "datasets": [
+        "f-semantic-corpus",
+        "f-semantic-queries"
+      ],
+      "solution": "GET f-semantic-queries/_doc/latency\n\nGET f-semantic-corpus/_search\n{\n  \"size\": 5,\n  \"_source\": [\n    \"title\",\n    \"category\"\n  ],\n  \"knn\": {\n    \"field\": \"embedding\",\n    \"query_vector\": [0.0099388, 0.01831091, 0.00932686, 0.08633924, -0.01149291, -0.01410265, -0.01522951, 0.00896845, -0.01644544, -0.06206709, 0.02144588, 0.00409826, -0.00833821, 0.00062246, -0.04466587, -0.01783631, 0.03878011, 0.01986636, -0.02006898, -0.02781648, -0.01454832, 0.0050209, 0.06923106, -0.01036774, -0.01971359, -0.04481061, -0.0270639, -0.10214437, -0.00378451, -0.03118976, -0.04623769, 0.0727353, 0.02773781, 0.09988556, -0.01851264, 0.02868449, 0.00066232, 0.05195137, 0.01149631, -0.04730954, -0.0339052, 0.01990789, -0.00011136, 0.04427784, 0.03850671, -0.02228385, 0.01766287, -0.01176485, 0.05441881, -0.05033702, -0.11349477, -0.00081671, -0.06106472, -0.03733641, 0.0307567, 0.02183421, -0.03362513, 0.06204961, 0.01996515, -0.01803189, 0.03964386, -0.04343566, -0.03062104, 0.00182563, 0.01196074, 0.00820163, 0.06979913, -0.01829922, 0.02745117, -0.06160554, 0.01102466, 0.05622746, -0.09753666, 0.09047975, 0.05661242, 0.03584555, -0.01938392, -0.02826598, 0.0344885, -0.0230634, -0.02711469, 0.00513573, -0.05129146, 0.05305298, 0.04827378, -0.05802389, 0.07486712, -0.0770864, 0.03805294, -0.06285019, 0.07897063, -0.03069627, -0.0321783, -0.07631312, 0.0099602, 0.01316531, 0.05745191, -0.02707961, 0.02115058, 0.00739926, 0.03388713, 0.07658204, -0.00292582, -0.02152839, -0.08876555, 0.08960051, 0.06850848, 0.12778787, -0.00614441, -0.03516079, -0.04872987, -0.04354427, -0.02782977, -0.04176348, -0.01958801, -0.00692997, 0.0110421, -0.0236135, 0.01299001, 0.07101484, -0.00674, 0.08413637, 0.00922294, -0.07964636, 0.06248832, 0.07527723, -0.1381412, 0.0, 0.06358497, 0.0402732, -0.01110532, -0.01088206, -0.07584488, 0.00847376, 0.01980953, 0.11414673, -0.03894496, 0.02769337, -0.00407345, 0.05498781, -0.02078806, -0.04149448, 0.0276906, 0.01177344, -0.01361287, 0.04898535, -0.11153421, -0.00311575, 0.0639126, -0.07797984, 0.06244147, -0.0091266, 0.08521967, -0.02832991, -0.01510227, -0.01939121, 0.02311287, 0.00327169, -0.0329538, -0.02245354, -0.09042715, 0.00384646, 0.0252092, 0.02179499, 0.0490237, 0.01757635, -0.03411257, -0.05597026, -0.15525754, 0.0433759, -0.01535821, -0.02816991, -0.02927176, -0.03405539, -0.07161771, -0.01968544, 0.01170176, 0.09805421, 0.01272693, 0.04001132, -0.04319861, 0.04744774, 0.02218922, 0.03818161, 0.02675695, 0.06510649, 0.02279469, 0.03359021, 0.10086073, -0.08083419, -0.03644718, -0.02312408, 0.00047212, -0.00529202, 0.00801912, 0.05406728, 0.04992556, 0.04555487, 0.05903289, 0.01065409, 0.15204921, -0.02961999, 0.05948756, -0.08234023, -0.06912721, -0.02214495, -0.01104508, -0.07920738, 0.01663442, -0.05442284, 0.01311117, 0.0368456, 0.02623423, -0.0520937, 0.0256773, -0.03481617, -0.03467278, 0.02033608, -0.02022984, 0.1304172, -0.09143509, 0.00225228, -0.0325377, -0.0, -0.01479624, -0.13009179, 0.06994645, 0.04336849, 0.02731091, -0.04515998, 0.02002358, 0.00302665, 0.074673, -0.01026635, 0.00399519, -0.05621354, 0.02521336, -0.02485829, -0.04001188, 0.13119036, 0.04725721, -0.02996969, 0.04737475, 0.04154699, -0.07235134, 0.10029362, -0.09909106, -0.02443326, -0.08402932, 0.03451248, -0.01542113, 0.01818263, -0.05308602, 0.01653744, -0.08189149, 0.02649435, -0.04494335, -0.00192902, -0.01201674, 0.06306001, -0.0142221, -0.00768697, -0.075378, 0.03921081, 0.0501228, 0.01989872, 0.01999799, -0.01938158, -0.00345998, 0.00367328, -0.11990938, -0.00550796, 0.0218102, 0.06834355, 0.08850962, -0.03428185, 0.00037331, -0.02915326, 0.05221456, -0.01699782, -0.07132731, -0.04369588, -0.04977117, 0.01663428, -0.05037712, 0.0525948, -0.04410119, 0.03182523, 0.05911779, -0.04595805, 0.03324375, -0.03442778, 0.06037572, -0.01715747, 0.00380658, -0.05266954, 0.03717981, -0.01936187, 0.00101372, 0.01330918, 0.01733278, 0.03491187, -0.03219214, 0.05845456, -0.00642775, 0.06557109, -0.01514548, 0.01015336, -0.09087692, 0.07949119, -0.01136684, 0.09397931, -0.02410533, 0.00536069, -0.02718477, -0.06630776, -0.0345768, 0.05446531, 0.0283526, -2e-08, 0.00902493, 0.0315026, 0.00738903, 0.03462844, 0.09392361, 0.06470404, -0.05701291, 0.24434091, -0.05551783, -0.02106546, 0.03860374, 0.00423649, 0.01472611, -0.00179401, 0.07998761, -0.03923493, -0.03636734, -0.0633648, -0.11537831, -0.08292085, 0.01188855, 0.07419044, 0.01275034, -0.0261583, 0.00934577, 0.03788849, -0.0047208, 0.05605958, -0.01845015, -0.06441101, -0.06669379, 0.0097694, -0.04678397, -0.01477985, 0.05584677, -0.02222601, -0.03474523, -0.03131633, -0.08121494, 0.0566501, 0.04514556, 0.04043026, 0.01294974, 0.02690399, 0.00773758, 0.00193395, 0.02227134, 0.03522454, 0.07115011, -0.0740502, 0.00554588, -0.06094439, -0.07466593, 0.02595749, 0.00428409, 0.05038615, 0.04203923, -0.04390974, 0.06280781, 0.00442888, 0.04523166, -0.0801807, -0.04128074, 0.08057358],\n    \"k\": 5,\n    \"num_candidates\": 32,\n    \"filter\": {\n      \"bool\": {\n        \"filter\": [\n          {\n            \"term\": {\n              \"category\": \"search\"\n            }\n          },\n          {\n            \"term\": {\n              \"language\": \"en\"\n            }\n          },\n          {\n            \"term\": {\n              \"published\": true\n            }\n          }\n        ]\n      }\n    }\n  }\n}",
+      "kind": "query",
+      "check": "f_semantic_knn",
+      "cluster": "cluster1",
+      "answer": "",
+      "notes": [
+        "작성한 합성 안내문을 sentence-transformers/all-MiniLM-L6-v2(1110a243fdf4, Apache-2.0)로 실제 인코딩한 384차원 벡터다. 평균 pooling과 L2 정규화를 적용했다. 모델의 품질을 공식 시험 점수로 평가하는 문항은 아니다.",
+        "이 Docker는 ML 노드가 꺼져 있다. 문서·질의 embedding은 이미 준비되어 있으며 모델 다운로드나 외부 inference API 없이 검색한다. semantic_text의 자동 inference 설정은 이 실습 범위에 포함하지 않는다.",
+        "작은 32건 corpus는 양자화하지 않은 HNSW로 준비했다. 자동 검증은 실제 벡터·RRF 검색 결과를 확인하며 대규모 데이터의 ANN recall을 보장하는 벤치마크가 아니다.",
+        "F01을 풀지 않아도 이 문제를 풀 수 있도록 검색 가능한 f-semantic-corpus가 별도로 준비되어 있다.",
+        "관련성이 높은 draft와 다른 언어 문서가 포함되어 있다. 조건을 kNN 내부에 적용해야 허용된 후보 중에서 5건을 찾는다."
+      ],
+      "hint": "knn.filter의 bool.filter에 세 term 조건을 넣고 _source를 제한한다.",
+      "reconstructed": false,
+      "intro": "실제 Elasticsearch 9.3.8에서 실행하는 자체 제작 모의 문항입니다. 공식 기출 복원본이 아닙니다.",
+      "source": {
+        "document": null,
+        "pages": [],
+        "label": "Elastic kNN 공식 문서",
+        "url": "https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-knn-query"
+      },
+      "references": [
+        {
+          "label": "Elastic kNN 공식 문서",
+          "url": "https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-knn-query"
+        },
+        {
+          "label": "Embedding 모델과 라이선스",
+          "url": "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
+        },
+        {
+          "label": "semantic_text와 inference 범위",
+          "url": "https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/semantic-text-reference"
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "set": "F",
+      "number": 3,
+      "title": "BM25와 벡터 검색을 RRF로 결합",
+      "topic": "Semantic Search · Hybrid search · RRF",
+      "requirements": [
+        "f-semantic-corpus를 대상으로 retriever.rrf를 사용하는 하이브리드 검색을 작성한다.",
+        "첫 번째 standard retriever는 semantic search를 title^2와 content의 multi_match로 검색한다.",
+        "두 번째 knn retriever는 GET f-semantic-queries/_doc/hybrid의 준비된 embedding을 사용하여 embedding 필드를 k:12, num_candidates:32로 검색한다.",
+        "language:en과 published:true를 두 retriever 모두에 적용한다. standard는 bool.filter, knn은 내부 filter를 사용한다. 검색 후 post_filter로만 제한하지 않는다. category는 제한하지 않는다.",
+        "RRF는 rank_constant:20, rank_window_size:12를 사용하고 최종 size:5로 반환한다. BM25 점수와 cosine 점수를 직접 합산하는 bool.should로 대체하지 않는다.",
+        "문서 필드는 title과 category만 반환하며 위 두 조건 이외의 filter나 별도 sort는 사용하지 않는다."
+      ],
+      "datasets": [
+        "f-semantic-corpus",
+        "f-semantic-queries"
+      ],
+      "solution": "GET f-semantic-queries/_doc/hybrid\n\nGET f-semantic-corpus/_search\n{\n  \"size\": 5,\n  \"_source\": [\n    \"title\",\n    \"category\"\n  ],\n  \"retriever\": {\n    \"rrf\": {\n      \"retrievers\": [\n        {\n          \"standard\": {\n            \"query\": {\n              \"bool\": {\n                \"must\": {\n                  \"multi_match\": {\n                    \"query\": \"semantic search\",\n                    \"fields\": [\n                      \"title^2\",\n                      \"content\"\n                    ]\n                  }\n                },\n                \"filter\": [\n                  {\n                    \"term\": {\n                      \"language\": \"en\"\n                    }\n                  },\n                  {\n                    \"term\": {\n                      \"published\": true\n                    }\n                  }\n                ]\n              }\n            }\n          }\n        },\n        {\n          \"knn\": {\n            \"field\": \"embedding\",\n            \"query_vector\": [0.02951861, 0.02420704, -0.03105728, -0.00337049, 0.0005734, 0.01008796, 0.04491997, 0.00539205, -0.02301368, -0.0049965, 0.0656867, -0.05712127, 0.08019309, 0.04383033, 0.04415508, 0.06804822, 0.08472699, 0.06865611, -0.03739599, -0.01467439, 0.07715172, 0.09452587, -0.00387212, -0.02615961, -0.07200218, 0.04475025, -0.01701902, -0.06180914, 0.03638094, -0.01849429, 0.01032951, 0.10187487, 0.01338992, 0.11982103, 0.02106228, -0.00933972, -0.02999611, 0.02998728, 0.04299637, -0.02689315, -0.10963575, -0.04813406, -0.02990285, 0.03656573, 0.02872567, 0.06332114, -0.06750365, -0.0268551, -0.00091436, -0.00079096, -0.1233893, 0.00314618, -0.06509135, -0.04193797, 0.04486736, 0.05750726, -0.02356949, -0.03762788, -0.05130304, -0.09968241, -0.00678374, -0.06298889, -0.04607246, 0.00485539, 0.05967545, -0.03499678, 0.02467736, -0.01283569, 0.11957908, -0.08026481, 0.03628825, 0.01493576, -0.02725426, 0.01468996, 0.04298965, 0.01617717, 0.03961773, 0.02354561, 0.00405624, -0.06391994, -0.026526, -0.03483427, 0.01516893, 0.07765809, 0.01286916, -0.02433627, 0.05506899, -0.08480592, 0.03639283, 0.02532037, 0.01401007, -0.09728357, 0.03802618, -0.02402195, -0.01594349, 0.01028333, 0.01085199, -0.06596517, 0.09663656, 0.10724841, 0.02382161, 0.02323033, -0.00716785, -0.05252416, -0.08380637, 0.0286181, -0.04704605, 0.01094016, 0.08532222, -0.07970704, -0.06066458, 0.03056612, 0.00731802, -0.10696626, -0.01030331, -0.00930605, 0.00576278, -0.01265458, 0.07392039, -0.0553257, -0.06957107, 0.00380484, -0.02577611, -0.0240536, -0.06779751, -0.01313956, -0.05655174, -0.0, 0.06802505, 0.02171402, 0.00415205, 0.02713411, 0.00032417, 0.00177874, 0.05695534, 0.02841202, -0.03755094, -0.03049927, -0.05351461, 0.03561201, -0.05812676, -0.01750432, 0.0476457, -0.02064048, -0.05834923, 0.08464197, -0.08749866, -0.00789217, 0.01924314, 0.04547777, 0.0380566, -0.00709613, -0.00759884, -0.01222398, -0.03440037, -0.06152743, 0.01621418, -0.00145677, -0.01707326, 0.0194033, -0.02771839, 0.03677946, 0.02398365, 0.01482313, -0.0226841, -0.01198297, 0.00142473, -0.06811275, -0.08963444, -0.00274839, 0.03481232, -0.06882428, 0.0250868, -0.00175628, -0.09322596, -0.01801598, 0.02872214, -0.03873858, 0.10235276, 0.02912752, -0.00635487, 0.05752307, 0.07120984, 0.0585538, 0.02744427, 0.06315548, 0.03084341, 0.04755808, 0.00050547, -0.01533673, 0.08105028, 0.01946404, -0.02676373, 0.018119, 0.04078218, -0.01826153, 0.10501752, 0.04207755, -0.00376046, 0.00247471, 0.06831174, -0.03422713, 0.07001145, -0.05651652, -0.04061511, -0.03238754, -0.07894021, 0.02200249, -0.08167227, -0.05054241, 0.00384, 0.03648083, -0.00982061, -0.02793981, 0.00478109, -0.08385407, 0.05085237, -0.02067949, -0.06843397, 0.07374253, -0.05921827, 0.05145576, 0.00364336, 0.0, -0.03145609, -0.11744869, 0.04342478, 0.04383397, -0.01181152, -0.05348732, 0.04482083, -0.0625779, -0.00615078, 0.07190669, -0.01818066, -0.04020421, 0.01260515, -0.01374295, -0.05282081, 0.08987513, 0.02275194, -0.02176141, -0.00053263, 0.16395551, -0.04380258, 0.06498162, -0.19169961, 0.02363778, 0.03839253, 0.0175992, 0.01095678, 0.01374447, -0.03800109, -0.0138065, 0.00866097, -0.07661811, -0.03969108, -0.01051199, -0.1023948, -0.00738496, 0.02426233, 0.03394654, -0.09891032, 0.0657944, -0.07211572, 0.04772857, -0.01076907, 0.04253253, 0.00787748, -0.03661994, -0.14079152, 0.09245407, 0.05531897, 0.00777588, 0.05081103, -0.00601773, 0.00168875, -0.040898, 0.00670077, 0.00373039, -0.00969646, 0.01161751, -0.05764101, 0.02408215, -0.05320716, -0.00191501, -0.01322418, 0.15392023, -0.03383475, 0.00889682, -0.03911969, 0.0025992, -0.05330971, -0.02358855, 0.06199473, 0.03103239, 0.00179934, 0.03141014, 0.08843745, 0.02664337, -0.01488608, 0.04047263, -0.01389945, -0.04201813, -0.04839092, 0.01745022, 0.07074285, 0.11988408, -0.04574445, 0.02608547, 0.02403675, 0.05353266, -0.00747902, -0.0650738, -0.03990566, -0.09271716, -0.00358326, 0.00074143, -0.00513527, -1e-08, -0.10358472, -0.01980551, -0.00964098, 0.01110983, 0.04259294, 0.03131671, 0.01312654, 0.0757985, -0.04104973, -0.00141016, -0.00508591, 0.04177495, -0.03688261, 0.06967714, 0.00410809, -0.00176871, 0.01384333, -0.032378, -0.02340446, -0.00495239, 0.05737454, 0.08432453, -0.0247018, 0.13525969, 0.12445368, 0.00795045, -0.0189765, 0.04785337, 0.05139841, 0.01519016, -0.02624324, 0.02850092, -0.00230223, -0.03428316, 0.12125836, 0.04429192, -0.01355081, -0.09028791, -0.08439853, 0.00641991, 0.05481286, -0.02887664, -0.0057233, -0.03260081, 0.10631789, 0.0135611, -0.02338036, -0.03707033, 0.03415438, 0.02104182, -0.03675719, 0.03555168, -0.09267228, 0.00674043, -0.021362, -0.00707963, -0.03461917, 0.02287647, 0.02842727, -0.0526359, 0.07564919, 0.05236468, 0.04042371, -0.0044194],\n            \"k\": 12,\n            \"num_candidates\": 32,\n            \"filter\": {\n              \"bool\": {\n                \"filter\": [\n                  {\n                    \"term\": {\n                      \"language\": \"en\"\n                    }\n                  },\n                  {\n                    \"term\": {\n                      \"published\": true\n                    }\n                  }\n                ]\n              }\n            }\n          }\n        }\n      ],\n      \"rank_constant\": 20,\n      \"rank_window_size\": 12\n    }\n  }\n}",
+      "kind": "query",
+      "check": "f_semantic_rrf",
+      "cluster": "cluster1",
+      "answer": "",
+      "notes": [
+        "작성한 합성 안내문을 sentence-transformers/all-MiniLM-L6-v2(1110a243fdf4, Apache-2.0)로 실제 인코딩한 384차원 벡터다. 평균 pooling과 L2 정규화를 적용했다. 모델의 품질을 공식 시험 점수로 평가하는 문항은 아니다.",
+        "이 Docker는 ML 노드가 꺼져 있다. 문서·질의 embedding은 이미 준비되어 있으며 모델 다운로드나 외부 inference API 없이 검색한다. semantic_text의 자동 inference 설정은 이 실습 범위에 포함하지 않는다.",
+        "작은 32건 corpus는 양자화하지 않은 HNSW로 준비했다. 자동 검증은 실제 벡터·RRF 검색 결과를 확인하며 대규모 데이터의 ANN recall을 보장하는 벤치마크가 아니다.",
+        "F01/F02의 실행 여부와 무관하게 준비된 corpus로 검색한다. 문서·질의 벡터는 같은 모델과 pooling으로 계산되어 있다.",
+        "RRF는 서로 다른 검색 결과의 순위를 결합한다. 문서의 정확한 제품 이름과 의미 기반 이웃을 함께 활용하는 실습이다. 유효한 기존 trial 라이선스를 사용한다."
+      ],
+      "hint": "retriever.rrf.retrievers 아래 standard와 knn을 형제 항목으로 넣고 각 후보 단계에 같은 공개·언어 조건을 적용한다.",
+      "reconstructed": false,
+      "intro": "실제 Elasticsearch 9.3.8에서 실행하는 자체 제작 모의 문항입니다. 공식 기출 복원본이 아닙니다.",
+      "source": {
+        "document": null,
+        "pages": [],
+        "label": "Elastic RRF retriever 공식 문서",
+        "url": "https://www.elastic.co/docs/reference/elasticsearch/rest-apis/retrievers/rrf-retriever"
+      },
+      "references": [
+        {
+          "label": "Elastic RRF retriever 공식 문서",
+          "url": "https://www.elastic.co/docs/reference/elasticsearch/rest-apis/retrievers/rrf-retriever"
+        },
+        {
+          "label": "Embedding 모델과 라이선스",
+          "url": "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
+        },
+        {
+          "label": "semantic_text와 inference 범위",
+          "url": "https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/semantic-text-reference"
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "set": "F",
+      "number": 4,
+      "title": "ES|QL · 상태별 매장 순매출",
+      "topic": "ES|QL · WHERE / EVAL / 조건 집계",
+      "requirements": [
+        "cluster1의 f-order-lines를 FROM으로 읽고 POST /_query의 query에 ES|QL 파이프라인을 작성한다.",
+        "store가 존재하고 quantity > 0, unit_price_cents >= 0인 paid/refunded/cancelled 행만 포함한다. 필수 수치가 없는 행과 다른 상태는 제외한다.",
+        "행 금액은 quantity * unit_price_cents - discount_cents이다. 누락된 discount_cents는 0이며, 할인은 행 전체에 한 번 적용한다.",
+        "매장별 paid_cents는 paid 금액 합계, refund_cents는 refunded 금액 합계, cancelled_lines는 cancelled 행 수를 구한다. 해당 상태가 없는 금액 합계는 0으로 반환한다.",
+        "net_cents = paid_cents - refund_cents로 계산한다. 취소 금액은 매출에 포함하지 않는다.",
+        "store, paid_cents, refund_cents, net_cents, cancelled_lines 순서로 이 5개 열만 반환한다. net_cents 내림차순, 동점은 store 오름차순으로 모든 매장을 반환한다."
+      ],
+      "source": {
+        "document": "Elastic ES|QL 공식 문서",
+        "pages": [],
+        "label": "자체 출제 · Elasticsearch 9.3.8 호환 ES|QL",
+        "url": "https://www.elastic.co/docs/reference/query-languages/esql/commands/stats-by"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "f-order-lines"
+      ],
+      "notes": [
+        "금액 단위는 센트 정수이다. 동률 매장과 paid가 전혀 없는 매장을 포함하는 합성 데이터다."
+      ],
+      "hint": "집계 전체 앞의 WHERE와 각 SUM/COUNT 뒤의 WHERE는 다른 역할이다. 조건별로 행을 먼저 모두 제거하지 않는다.",
+      "solution": "POST /_query\n{\n  \"query\": \"FROM f-order-lines\\n| WHERE store IS NOT NULL AND quantity > 0 AND unit_price_cents >= 0 AND status IN (\\\"paid\\\", \\\"refunded\\\", \\\"cancelled\\\")\\n| EVAL line_cents = quantity * unit_price_cents - COALESCE(discount_cents, 0)\\n| STATS paid_cents = SUM(line_cents) WHERE status == \\\"paid\\\", refund_cents = SUM(line_cents) WHERE status == \\\"refunded\\\", cancelled_lines = COUNT(*) WHERE status == \\\"cancelled\\\" BY store\\n| EVAL paid_cents = COALESCE(paid_cents, 0), refund_cents = COALESCE(refund_cents, 0)\\n| EVAL net_cents = paid_cents - refund_cents\\n| SORT net_cents DESC, store ASC\\n| KEEP store, paid_cents, refund_cents, net_cents, cancelled_lines\"\n}",
+      "kind": "query",
+      "check": "f_esql_orders",
+      "answer": "",
+      "intro": "실제 Elasticsearch ES|QL Query API로 결과 표를 반환하세요. 문자열 답안이 아닌 실행 결과를 검증합니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "F05",
+      "set": "F",
+      "number": 5,
+      "title": "ES|QL · UTC 일별 운영 지연 집계",
+      "topic": "ES|QL · DATE_TRUNC / 날짜 경계 / Null",
+      "requirements": [
+        "f-service-events에서 environment가 production이고 @timestamp가 2026-09-01T00:00:00Z 이상, 2026-09-04T00:00:00Z 미만인 행만 집계한다.",
+        "UTC 자정 기준의 1일 버킷 day를 만든다. 원본 시간에 오프셋이 있어도 UTC로 해석하며 관측된 날짜만 반환한다.",
+        "날짜별 requests는 전체 행 수, errors는 status_code >= 500인 행 수, slow는 latency_ms >= 500인 행 수다. 각 필드가 누락된 행은 해당 조건 건수에 포함하지 않는다.",
+        "average_ms는 누락된 latency_ms를 제외한 평균을 소수점 한 자리로 반올림한다. 0ms는 정상 관측값이다.",
+        "day, requests, errors, slow, average_ms 순서로 이 5개 열만 반환하고 day 오름차순으로 모든 버킷을 정렬한다."
+      ],
+      "source": {
+        "document": "Elastic ES|QL 공식 문서",
+        "pages": [],
+        "label": "자체 출제 · Elasticsearch 9.3.8 호환 ES|QL",
+        "url": "https://www.elastic.co/docs/reference/query-languages/esql/functions-operators/date-time-functions/date_trunc"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "f-service-events"
+      ],
+      "notes": [
+        "9.3.8에서 지원하는 기본 UTC 동작을 사용한다. 9.4부터 추가된 Query API time_zone 옵션은 필요하지 않다."
+      ],
+      "hint": "범위의 상한은 미포함이며 DATE_TRUNC(1 day, @timestamp)는 UTC 날짜 경계를 사용한다.",
+      "solution": "POST /_query\n{\n  \"query\": \"FROM f-service-events\\n| WHERE environment == \\\"production\\\" AND @timestamp >= \\\"2026-09-01T00:00:00Z\\\" AND @timestamp < \\\"2026-09-04T00:00:00Z\\\"\\n| EVAL day = DATE_TRUNC(1 day, @timestamp)\\n| STATS requests = COUNT(*), errors = COUNT(*) WHERE status_code >= 500, slow = COUNT(*) WHERE latency_ms >= 500, average_ms = ROUND(AVG(latency_ms), 1) BY day\\n| SORT day ASC\\n| KEEP day, requests, errors, slow, average_ms\"\n}",
+      "kind": "query",
+      "check": "f_esql_days",
+      "answer": "",
+      "intro": "실제 Elasticsearch ES|QL Query API로 결과 표를 반환하세요. 문자열 답안이 아닌 실행 결과를 검증합니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "F06",
+      "set": "F",
+      "number": 6,
+      "title": "ES|QL · Lookup 상품 가격과 누락 SKU",
+      "topic": "ES|QL · LOOKUP JOIN / lookup index / 집계",
+      "requirements": [
+        "f-purchases에서 state가 completed이고 quantity > 0인 구매 행을 읽는다.",
+        "sku를 키로 f-product-catalog에 LOOKUP JOIN한다. 상품 인덱스는 index.mode=lookup으로 준비되어 있고 sku는 양쪽 모두 keyword다.",
+        "상품 정보가 없는 SKU 및 누락된 sku 행도 버리지 않는다. department 누락은 \"unknown\"으로, 단가 누락은 계산에 0으로 처리한다.",
+        "부서별 purchase_rows는 구매 행 수, units는 수량 합계, revenue_cents는 quantity * 단가 합계, unpriced_units는 원래 단가가 없던 구매의 수량 합계다. 가격 0과 가격 누락을 구분한다.",
+        "department, purchase_rows, units, revenue_cents, unpriced_units 순서로 이 5개 열만 반환한다. revenue_cents 내림차순, 동점은 department 오름차순으로 모든 부서를 반환한다."
+      ],
+      "source": {
+        "document": "Elastic ES|QL 공식 문서",
+        "pages": [],
+        "label": "자체 출제 · Elasticsearch 9.3.8 호환 ES|QL",
+        "url": "https://www.elastic.co/docs/reference/query-languages/esql/esql-lookup-join"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "f-purchases",
+        "f-product-catalog"
+      ],
+      "notes": [
+        "lookup의 sku는 고유하다. 알려진 부서이지만 단가가 누락된 상품도 있으므로 unknown 부서만 세면 틀린다."
+      ],
+      "hint": "LOOKUP JOIN은 일치하지 않는 원본 행도 유지한다. COALESCE로 바꾸기 전에 가격 누락 여부를 기록한다.",
+      "solution": "POST /_query\n{\n  \"query\": \"FROM f-purchases\\n| WHERE state == \\\"completed\\\" AND quantity > 0\\n| LOOKUP JOIN f-product-catalog ON sku\\n| EVAL department = COALESCE(department, \\\"unknown\\\"), line_cents = quantity * COALESCE(unit_price_cents, 0), unpriced = CASE(unit_price_cents IS NULL, quantity, 0)\\n| STATS purchase_rows = COUNT(*), units = SUM(quantity), revenue_cents = SUM(line_cents), unpriced_units = SUM(unpriced) BY department\\n| SORT revenue_cents DESC, department ASC\\n| KEEP department, purchase_rows, units, revenue_cents, unpriced_units\"\n}",
+      "kind": "query",
+      "check": "f_esql_lookup",
+      "answer": "",
+      "intro": "실제 Elasticsearch ES|QL Query API로 결과 표를 반환하세요. 문자열 답안이 아닌 실행 결과를 검증합니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "F07",
+      "set": "F",
+      "number": 7,
+      "title": "ES|QL · 다중 태그의 중복 없는 조회수",
+      "topic": "ES|QL · SPLIT / MV_DEDUPE / MV_EXPAND",
+      "requirements": [
+        "f-article-tags에서 published가 true인 글만 대상으로 한다. article_id는 문서마다 고유하다.",
+        "tags_csv를 쉼표로 나눠 multivalue로 만든 뒤 각 태그를 행으로 확장한다. 태그는 이미 소문자이며 공백이 없으므로 별도 정규화는 필요 없다.",
+        "한 글에 같은 태그가 반복되면 그 글·태그 조합을 한 번만 센다. null 태그 및 빈 문자열 태그는 제외한다.",
+        "태그별 articles는 고유 글 수, total_views는 그 태그를 가진 각 글의 views 합계다. 누락된 views는 0이고 여러 다른 태그에 속한 글은 각 태그에 한 번씩 기여한다.",
+        "tag, articles, total_views 순서로 이 3개 열만 반환한다. articles 내림차순, 이어서 total_views 내림차순, 마지막 tag 오름차순으로 모든 태그를 반환한다."
+      ],
+      "source": {
+        "document": "Elastic ES|QL 공식 문서",
+        "pages": [],
+        "label": "자체 출제 · Elasticsearch 9.3.8 호환 ES|QL",
+        "url": "https://www.elastic.co/docs/reference/query-languages/esql/commands/mv_expand"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "f-article-tags"
+      ],
+      "notes": [
+        "SPLIT으로 생성된 multivalue에는 반복 값이 남을 수 있다. MV_EXPAND 이후 최종 SORT로 결과 순서를 확정한다."
+      ],
+      "hint": "MV_EXPAND 뒤에만 COUNT_DISTINCT를 쓰면 조회수 SUM의 중복은 남는다. 먼저 태그를 dedupe하거나 글·태그별로 중간 집계한다.",
+      "solution": "POST /_query\n{\n  \"query\": \"FROM f-article-tags\\n| WHERE published == true\\n| EVAL tag = MV_DEDUPE(SPLIT(tags_csv, \\\",\\\")), article_views = COALESCE(views, 0)\\n| MV_EXPAND tag\\n| WHERE tag IS NOT NULL AND tag != \\\"\\\"\\n| STATS articles = COUNT_DISTINCT(article_id), total_views = SUM(article_views) BY tag\\n| SORT articles DESC, total_views DESC, tag ASC\\n| KEEP tag, articles, total_views\"\n}",
+      "kind": "query",
+      "check": "f_esql_tags",
+      "answer": "",
+      "intro": "실제 Elasticsearch ES|QL Query API로 결과 표를 반환하세요. 문자열 답안이 아닌 실행 결과를 검증합니다.",
+      "reconstructed": false
+    },
+    {
+      "id": "F08",
+      "set": "F",
+      "number": 8,
+      "title": "Streams Processing으로 로그를 구조화",
+      "topic": "Streams · Streamlang · Conditional processing",
+      "requirements": [
+        "Kibana Streams에서 logs-f08-app-default을 열고 Processing에 저장되는 처리 규칙을 구성한다.",
+        "message의 level, status, duration, service 값을 각각 log.level, http.response.status_code, event.duration_ms, service.name에 추출한다.",
+        "http.response.status_code와 event.duration_ms는 숫자 long으로 변환하며 원래 message와 event.id는 유지한다.",
+        "log.level이 error인 문서에만 event.kind=alert를 추가한다. info 문서에는 event.kind를 추가하지 않는다.",
+        "규칙을 저장한 뒤 아래 두 새 문서를 정상 색인한다: f08-error-proof의 message는 level=error status=503 duration=175 service=checkout; f08-info-proof의 message는 level=info status=200 duration=24 service=catalog.",
+        "두 새 문서의 @timestamp는 2026-10-01T00:00:00Z, event.id는 각각 지정된 proof 이름으로 제출한다."
+      ],
+      "source": {
+        "document": "",
+        "pages": [],
+        "label": "Elastic 공식 Streams 문서",
+        "url": "https://www.elastic.co/docs/solutions/observability/streams/parse-and-process"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "logs-f08-app-default"
+      ],
+      "notes": [
+        "Kibana cluster1에서 Streams를 검색해 해당 스트림을 연다. 이 문항은 기존 data stream을 관리하는 classic Streams를 사용한다.",
+        "예시의 kbn:/api/streams 요청은 Kibana API다. 이 실습의 Console 프록시는 kbn: 요청을 실제 Kibana로 전달한다. 일반 Elasticsearch /api/streams 요청으로 바꾸지 않는다.",
+        "9.3에서는 wired root가 logs이며 현재 환경에서 활성화하지 않았다. logs.ecs/logs.otel은 9.4 이후 조건이므로 이 문항에 사용하지 않는다.",
+        "Processing 변경은 이후에 들어오는 문서에 적용된다. 준비된 기존 샘플이 자동으로 재처리되는 것은 아니다. 검증은 새 proof 문서를 확인한다.",
+        "event.duration_ms는 밀리초 단위의 실습용 사용자 필드다. ECS event.duration의 나노초 값과 혼동하지 않는다.",
+        "AI connector 없이 Create processor로 dissect, convert 두 개, 조건부 set을 직접 구성할 수 있다. 같은 결과를 내는 다른 Streams 처리 방식도 허용한다."
+      ],
+      "hint": "Dissect로 키 값을 분리하고 Convert를 적용한 뒤 Set에 log.level == error 조건을 연결한다.",
+      "solution": "GET kbn:/api/streams/logs-f08-app-default/_ingest\n\nPUT kbn:/api/streams/logs-f08-app-default/_ingest\n{\n  \"ingest\": {\n    \"classic\": {},\n    \"processing\": {\n      \"steps\": [\n        {\n          \"action\": \"dissect\",\n          \"from\": \"message\",\n          \"pattern\": \"level=%{log.level} status=%{http.response.status_code} duration=%{event.duration_ms} service=%{service.name}\"\n        },\n        {\n          \"action\": \"convert\",\n          \"from\": \"http.response.status_code\",\n          \"type\": \"long\"\n        },\n        {\n          \"action\": \"convert\",\n          \"from\": \"event.duration_ms\",\n          \"type\": \"long\"\n        },\n        {\n          \"action\": \"set\",\n          \"to\": \"event.kind\",\n          \"value\": \"alert\",\n          \"where\": {\n            \"field\": \"log.level\",\n            \"eq\": \"error\"\n          }\n        }\n      ]\n    },\n    \"lifecycle\": {\n      \"inherit\": {}\n    },\n    \"settings\": {},\n    \"failure_store\": {\n      \"inherit\": {}\n    }\n  }\n}\n\nPOST logs-f08-app-default/_doc?refresh=true\n{\n  \"@timestamp\": \"2026-10-01T00:00:00Z\",\n  \"message\": \"level=error status=503 duration=175 service=checkout\",\n  \"event\": {\n    \"id\": \"f08-error-proof\"\n  }\n}\n\nPOST logs-f08-app-default/_doc?refresh=true\n{\n  \"@timestamp\": \"2026-10-01T00:00:00Z\",\n  \"message\": \"level=info status=200 duration=24 service=catalog\",\n  \"event\": {\n    \"id\": \"f08-info-proof\"\n  }\n}\n\nGET logs-f08-app-default/_search\n{\n  \"query\": {\n    \"terms\": {\n      \"event.id\": [\n        \"f08-error-proof\",\n        \"f08-info-proof\"\n      ]\n    }\n  }\n}",
+      "kind": "state",
+      "check": "f_stream_processing",
+      "answer": "",
+      "reconstructed": true,
+      "intro": "Elasticsearch/Kibana 9.3.8의 실제 Streams 기능을 활용하는 새 예상 실습 문항입니다."
+    },
+    {
+      "id": "F09",
+      "set": "F",
+      "number": 9,
+      "title": "Streams Retention과 rollover 이후 쓰기 검증",
+      "topic": "Streams · Data stream lifecycle · Rollover",
+      "requirements": [
+        "Kibana Streams에서 logs-f09-retention-default을 열어 Retention을 직접 관리하도록 설정한다.",
+        "index template의 보존 설정 상속 대신 data stream lifecycle(DSL)로 7일 보존을 지정한다. ILM policy를 새로 만드는 문제가 아니다.",
+        "기존 seed 문서 세 개를 보존하면서 한 번 이상 수동 rollover한다.",
+        "rollover 후 스트림 이름으로 새 문서를 추가한다. event.id는 f09-after-rollover, message는 After rollover, @timestamp는 2026-10-01T00:00:01Z다.",
+        "새 문서는 현재 write backing index에 있고 seed 문서들은 이전 backing index에서 조회되어야 한다."
+      ],
+      "source": {
+        "document": "",
+        "pages": [],
+        "label": "Elastic 공식 Streams 문서",
+        "url": "https://www.elastic.co/guide/en/elasticsearch/reference/current/tutorial-manage-existing-data-stream.html"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "logs-f09-retention-default"
+      ],
+      "notes": [
+        "Kibana cluster1에서 Streams를 검색해 해당 스트림을 연다. 이 문항은 기존 data stream을 관리하는 classic Streams를 사용한다.",
+        "예시의 kbn:/api/streams 요청은 Kibana API다. 이 실습의 Console 프록시는 kbn: 요청을 실제 Kibana로 전달한다. 일반 Elasticsearch /api/streams 요청으로 바꾸지 않는다.",
+        "9.3에서는 wired root가 logs이며 현재 환경에서 활성화하지 않았다. logs.ecs/logs.otel은 9.4 이후 조건이므로 이 문항에 사용하지 않는다.",
+        "Streams 화면의 Retention → Edit data retention에서 custom 7 days를 선택할 수 있다. API 예시는 동일한 Streams 설정을 저장한다.",
+        "DSL 보존 기간은 삭제를 허용하는 최소 보존 기간이다. 설정 직후 모든 과거 문서가 삭제된다는 뜻이 아니다. backing index의 rollover 기준도 영향을 준다.",
+        "7일이 지나기를 기다릴 필요는 없다. 검증은 실제 Streams 설정, Elasticsearch lifecycle, rollover 결과와 문서의 backing index 위치를 확인한다."
+      ],
+      "hint": "Streams에서 DSL 보존을 저장한 뒤 _rollover하고 기존 backing index와 새 write index의 문서를 비교한다.",
+      "solution": "GET kbn:/api/streams/logs-f09-retention-default/_ingest\n\nPUT kbn:/api/streams/logs-f09-retention-default/_ingest\n{\n  \"ingest\": {\n    \"classic\": {},\n    \"processing\": {\n      \"steps\": []\n    },\n    \"lifecycle\": {\n      \"dsl\": {\n        \"data_retention\": \"7d\"\n      }\n    },\n    \"settings\": {},\n    \"failure_store\": {\n      \"inherit\": {}\n    }\n  }\n}\n\nGET _data_stream/logs-f09-retention-default/_lifecycle\n\nPOST logs-f09-retention-default/_rollover\n\nPOST logs-f09-retention-default/_doc?refresh=true\n{\n  \"@timestamp\": \"2026-10-01T00:00:01Z\",\n  \"message\": \"After rollover\",\n  \"event\": {\n    \"id\": \"f09-after-rollover\"\n  }\n}\n\nGET logs-f09-retention-default/_search\n{\n  \"size\": 10,\n  \"query\": {\n    \"match_all\": {}\n  }\n}",
+      "kind": "state",
+      "check": "f_stream_retention",
+      "answer": "",
+      "reconstructed": true,
+      "intro": "Elasticsearch/Kibana 9.3.8의 실제 Streams 기능을 활용하는 새 예상 실습 문항입니다."
+    },
+    {
+      "id": "F10",
+      "set": "F",
+      "number": 10,
+      "title": "Streams Failure store로 매핑 오류 진단",
+      "topic": "Streams · Failure store · Mapping failure",
+      "requirements": [
+        "Kibana Streams에서 logs-f10-audit-default의 Failure store를 활성화하고 실패 문서를 3일 보존하도록 설정한다.",
+        "event.id=f10-bad, message=Invalid audit timestamp, @timestamp=not-a-date인 문서를 해당 스트림에 색인한다.",
+        "이 문서는 일반 backing index에 저장되지 않고 실제 failure store에 들어가야 한다. 원본 잘못된 날짜와 event.id가 실패 문서 안에 보존되어야 한다.",
+        "실패 문서의 error.type은 document_parsing_exception이어야 하며 document.index는 대상 스트림 이름이어야 한다.",
+        "같은 스트림에 event.id=f10-good-proof, message=Valid audit timestamp, @timestamp=2026-10-01T00:00:02Z 문서를 추가해 정상 색인이 계속되는 것도 확인한다."
+      ],
+      "source": {
+        "document": "",
+        "pages": [],
+        "label": "Elastic 공식 Streams 문서",
+        "url": "https://www.elastic.co/docs/manage-data/data-store/data-streams/failure-store"
+      },
+      "cluster": "cluster1",
+      "datasets": [
+        "logs-f10-audit-default"
+      ],
+      "notes": [
+        "Kibana cluster1에서 Streams를 검색해 해당 스트림을 연다. 이 문항은 기존 data stream을 관리하는 classic Streams를 사용한다.",
+        "예시의 kbn:/api/streams 요청은 Kibana API다. 이 실습의 Console 프록시는 kbn: 요청을 실제 Kibana로 전달한다. 일반 Elasticsearch /api/streams 요청으로 바꾸지 않는다.",
+        "9.3에서는 wired root가 logs이며 현재 환경에서 활성화하지 않았다. logs.ecs/logs.otel은 9.4 이후 조건이므로 이 문항에 사용하지 않는다.",
+        "9.3.8에서 failure store에 우회 저장된 잘못된 날짜 문서는 HTTP 201과 failure_store:used로 응답한다. 정상 문서로 해석하지 말고 응답의 저장 위치를 확인한다.",
+        "::failures selector는 failure store를 검색한다. document.source 내부의 원본 값은 보존되지만 일반 검색용으로 모두 색인되는 것은 아니므로 event.id로 term 검색하지 말고 반환된 _source를 확인한다.",
+        "현재 9.3.8 환경의 Significant events 저장 쿼리 기능은 비활성화되어 있다. 이 문항은 실제 사용 가능한 Streams failure store를 사용한다."
+      ],
+      "hint": "Streams의 failure_store lifecycle을 활성화한 뒤 날짜 매핑 오류를 만들고 ::failures에서 원본과 error를 함께 확인한다.",
+      "solution": "GET kbn:/api/streams/logs-f10-audit-default/_ingest\n\nPUT kbn:/api/streams/logs-f10-audit-default/_ingest\n{\n  \"ingest\": {\n    \"classic\": {},\n    \"processing\": {\n      \"steps\": []\n    },\n    \"lifecycle\": {\n      \"inherit\": {}\n    },\n    \"settings\": {},\n    \"failure_store\": {\n      \"lifecycle\": {\n        \"enabled\": {\n          \"data_retention\": \"3d\"\n        }\n      }\n    }\n  }\n}\n\nGET _data_stream/logs-f10-audit-default/_options\n\nPOST logs-f10-audit-default/_doc?refresh=true\n{\n  \"@timestamp\": \"not-a-date\",\n  \"message\": \"Invalid audit timestamp\",\n  \"event\": {\n    \"id\": \"f10-bad\"\n  }\n}\n\nPOST logs-f10-audit-default/_doc?refresh=true\n{\n  \"@timestamp\": \"2026-10-01T00:00:02Z\",\n  \"message\": \"Valid audit timestamp\",\n  \"event\": {\n    \"id\": \"f10-good-proof\"\n  }\n}\n\nGET logs-f10-audit-default::failures/_search\n{\n  \"size\": 10,\n  \"query\": {\n    \"match_all\": {}\n  },\n  \"_source\": [\n    \"document.index\",\n    \"document.source\",\n    \"error.type\",\n    \"error.message\"\n  ]\n}\n\nGET logs-f10-audit-default/_search\n{\n  \"query\": {\n    \"term\": {\n      \"event.id\": \"f10-good-proof\"\n    }\n  }\n}",
+      "kind": "state",
+      "check": "f_stream_failures",
+      "answer": "",
+      "reconstructed": true,
+      "intro": "Elasticsearch/Kibana 9.3.8의 실제 Streams 기능을 활용하는 새 예상 실습 문항입니다."
+    }
+  ],
+  "references": [
+    {
+      "title": "Kibana Console",
+      "url": "https://www.elastic.co/docs/explore-analyze/query-filter/tools/console"
+    },
+    {
+      "title": "kNN query",
+      "url": "https://www.elastic.co/docs/reference/query-languages/query-dsl/query-dsl-knn-query"
+    },
+    {
+      "title": "Kibana authentication",
+      "url": "https://www.elastic.co/docs/deploy-manage/users-roles/cluster-or-deployment-auth/kibana-authentication"
+    },
+    {
+      "title": "Simulate pipeline",
+      "url": "https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-ingest-simulate"
+    }
+  ],
+  "default_set": "D"
+}

@@ -1,0 +1,1927 @@
+{
+  "indices": [
+    {
+      "cluster": "cluster1",
+      "index": "blogs",
+      "settings": {
+        "number_of_shards": 1,
+        "number_of_replicas": 0
+      },
+      "mappings": {
+        "properties": {
+          "title": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "content": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "summary": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "publish_date": {
+            "type": "date"
+          },
+          "authors": {
+            "properties": {
+              "uid": {
+                "type": "keyword"
+              },
+              "first_name": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "full_name": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              },
+              "job_title": {
+                "type": "text",
+                "fields": {
+                  "keyword": {
+                    "type": "keyword",
+                    "ignore_above": 256
+                  }
+                }
+              }
+            }
+          },
+          "category": {
+            "type": "keyword"
+          },
+          "popularity": {
+            "type": "long"
+          },
+          "locale": {
+            "type": "keyword"
+          }
+        }
+      },
+      "documents": [
+        {
+          "_id": "blogs-0001",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-01-01T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 50,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0002",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-02-02T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 51,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0003",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-03-03T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 52,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0004",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-04-04T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 53,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0005",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-05-05T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 54,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0006",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-06-06T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 55,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0007",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-07-07T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 56,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0008",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-08-08T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 57,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0009",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-09-09T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 58,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0010",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-10-10T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 59,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0011",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-11-11T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 60,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0012",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-12-12T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 61,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0013",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-01-13T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 62,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0014",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-02-14T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 63,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0015",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-03-15T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 64,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0016",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-04-16T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 65,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0017",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-05-17T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 66,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0018",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-06-18T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 67,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0019",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-07-19T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 68,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0020",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-08-20T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 69,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0021",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-09-21T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 70,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0022",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-10-22T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 71,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0023",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-11-23T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 72,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0024",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-12-24T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 73,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0025",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-01-25T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 74,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0026",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-02-26T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 75,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0027",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-03-27T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 76,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0028",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-04-01T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 77,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0029",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-05-02T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 78,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0030",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-06-03T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 79,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0031",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-07-04T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 80,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0032",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-08-05T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 81,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0033",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-09-06T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 82,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0034",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-10-07T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 83,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0035",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-11-08T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 84,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0036",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-12-09T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 85,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0037",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-01-10T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 86,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0038",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-02-11T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 87,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0039",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-03-12T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 88,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0040",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-04-13T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 89,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0041",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-05-14T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 90,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0042",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-06-15T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 91,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0043",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-07-16T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 92,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0044",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-08-17T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 93,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0045",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-09-18T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 94,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0046",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-10-19T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 95,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0047",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-11-20T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 96,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0048",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-12-21T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 97,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0049",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-01-22T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 98,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0050",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-02-23T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 99,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0051",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-03-24T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 100,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0052",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-04-25T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 101,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0053",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-05-26T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 102,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0054",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-06-27T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 103,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0055",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-07-01T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 104,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0056",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-08-02T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 105,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0057",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-09-03T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 106,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0058",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-10-04T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 107,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0059",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-11-05T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 108,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0060",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-12-06T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 109,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0061",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-01-07T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 110,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0062",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-02-08T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 111,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0063",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-03-09T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 112,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0064",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-04-10T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 113,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0065",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-05-11T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 114,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0066",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-06-12T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 115,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0067",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-07-13T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 116,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0068",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-08-14T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 117,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0069",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-09-15T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 118,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0070",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-10-16T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 119,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0071",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-11-17T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 120,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0072",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-12-18T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 121,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0073",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-01-19T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 122,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0074",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-02-20T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 123,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0075",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-03-21T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 124,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0076",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-04-22T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 125,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0077",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-05-23T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 126,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0078",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-06-24T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 127,
+            "locale": "en-us"
+          }
+        },
+        {
+          "_id": "blogs-0079",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-07-25T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 128,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0080",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-08-26T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 129,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        },
+        {
+          "_id": "blogs-0081",
+          "_source": {
+            "title": "Open Source Search",
+            "content": "Open source software enables elastic search. Learn certified engineer skills.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-09-27T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 130,
+            "locale": "en-us",
+            "category": "c0"
+          }
+        },
+        {
+          "_id": "blogs-0082",
+          "_source": {
+            "title": "Elastic Platform Guide",
+            "content": "Search with elastic and build dependable systems.",
+            "summary": "An open source search tutorial",
+            "publish_date": "2025-10-01T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u1",
+                "first_name": "david",
+                "full_name": "David Kim",
+                "job_title": "designer"
+              },
+              {
+                "uid": "u2",
+                "first_name": "john",
+                "full_name": "John Lee",
+                "job_title": "engineer"
+              }
+            ],
+            "popularity": 131,
+            "locale": "en-us",
+            "category": "c1"
+          }
+        },
+        {
+          "_id": "blogs-0083",
+          "_source": {
+            "title": "Reliable Search Systems",
+            "content": "An open source guide to indexing and search.",
+            "summary": "Practical elastic engineering",
+            "publish_date": "2025-11-02T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u3",
+                "first_name": "david",
+                "full_name": "David Park",
+                "job_title": "software engineer"
+              }
+            ],
+            "popularity": 132,
+            "locale": "en-us",
+            "category": "c2"
+          }
+        },
+        {
+          "_id": "blogs-0084",
+          "_source": {
+            "title": "Search Stories",
+            "content": "Building resilient applications and distributed data systems.",
+            "summary": "Open platforms for search",
+            "publish_date": "2025-12-03T12:00:00Z",
+            "authors": [
+              {
+                "uid": "u4",
+                "first_name": "alice",
+                "full_name": "Alice Han",
+                "job_title": "platform engineer"
+              }
+            ],
+            "popularity": 133,
+            "locale": "en-us",
+            "category": "c3"
+          }
+        }
+      ]
+    }
+  ]
+}

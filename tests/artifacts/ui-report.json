@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "scope": "Offline problem-shell DOM. APIs, storage, cookies, and iframe are TEST DOUBLES. Genuine Kibana, Elasticsearch, browser authentication and Docker were NOT run.",
+  "checks": [
+    "6 sets / 60 tasks",
+    "E selection / 10 tasks / PDF / mount solution",
+    "F selection / all 10 requirements / documentation / Streams solution",
+    "iframe navigation and persistence",
+    "context-cookie construction",
+    "source conflict notes",
+    "notebook serialization/reload",
+    "history import",
+    "grading display",
+    "22 base fixture entries",
+    "hint/solution modal",
+    "exam lock/unlock including validation button",
+    "set reset confirmation",
+    "answer export serialization",
+    "pane collapse",
+    "4 desktop viewport sizes",
+    "no JavaScript page errors"
+  ],
+  "errors": []
+}

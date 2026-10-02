@@ -1,0 +1,7 @@
+.git
+state
+__pycache__
+*.zip
+tests
+docs
+.env

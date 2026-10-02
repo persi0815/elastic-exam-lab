@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Elastic Exam Lab · 실습 워크스페이스</title>
+  <link rel="stylesheet" href="/legacy-style.css">
+  <script src="/legacy-app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/" aria-label="Elastic Exam Lab 홈"><span class="brand-mark"><i></i><i></i><i></i></span><span>Elastic<span class="brand-sub">EXAM LAB</span></span></a>
+  <div class="header-context"><span class="status-pill neutral">텍스트 보조 콘솔 · Kibana 아님</span><span id="version">Elasticsearch 9.3.8</span></div>
+  <div class="header-actions"><button id="datasetsBtn" class="ghost">데이터셋</button><button id="guideBtn" class="ghost">사용 가이드</button><button id="exportBtn" class="ghost">답안 내보내기 ↗</button></div>
+</header>
+<section class="toolbar" aria-label="시험 설정">
+  <div class="set-area"><label for="setSelect">문제 세트</label><select id="setSelect" aria-label="문제 세트"><option>A · 2026.02.26</option></select><span id="setCount" class="muted">10 TASKS</span></div>
+  <div class="session-actions"><span id="modeBadge" class="mode-badge">연습 모드</span><span id="timer" class="timer">03:00:00</span><button id="examBtn" class="outline">시험 시작</button><button id="resetBtn" class="subtle">환경 초기화</button></div>
+</section>
+<div id="environment" class="environment" role="status"><span class="pulse"></span><span id="envText">실습 환경 확인 중…</span><span id="clusterStatus" class="cluster-status"></span><div id="envProgress" class="env-progress"></div></div>
+<main class="layout">
+  <aside class="question-pane">
+    <div class="question-nav"><div class="section-label"><span>YOUR PROGRESS</span><span id="progressLabel">0 / 10</span></div><div id="taskNav" class="task-nav" aria-label="문항 이동"></div><div class="progress-track"><div id="progressBar"></div></div></div>
+    <div class="question-scroll">
+      <div class="eyebrow" id="taskNumber">TASK 01 / 10</div>
+      <h1 id="taskTitle">문제를 불러오는 중</h1>
+      <div id="taskTopic" class="topic-tag"></div>
+      <p id="taskIntro" class="intro"></p>
+      <div class="meta-line"><span class="tiny-label">대상</span><span id="taskCluster" class="mini-chip">cluster1</span><span class="tiny-label">제출</span><span id="submissionKind">클러스터 상태</span></div>
+      <h2 class="small-heading">요구사항</h2><ol id="requirements" class="requirements"></ol>
+      <div id="answerBlock" class="answer-block" hidden><label for="textAnswer">텍스트 답안</label><input id="textAnswer" placeholder="예: AS, UA" autocomplete="off"><small>이 문제는 검색 결과의 코드 2개를 제출합니다.</small></div>
+      <div id="taskDatasets" class="dataset-tags"></div>
+      <details id="notesBox" class="source-notes"><summary>원문과 실습 조건 확인 <span id="noteCount"></span></summary><div id="notes"></div></details>
+      <div class="source-line"><span>출처</span><a id="sourceLink" target="_blank" rel="noopener">첨부 PDF</a></div>
+      <div class="learning-actions"><button id="hintBtn" class="outline">힌트 보기</button><button id="solutionBtn" class="ghost">예시 풀이</button></div>
+      <div id="hintBox" class="hint-box" hidden></div>
+      <p class="disclaimer">기출 회고 기반 · 합성 데이터 사용<br>현재 공식 시험 범위/채점 방식과는 다를 수 있습니다.</p>
+    </div>
+    <div class="question-footer"><button id="flagBtn" class="ghost">⚑ 다시 보기</button><button id="nextBtn" class="next-btn">다음 문제 →</button></div>
+  </aside>
+  <section class="editor-pane" aria-label="코드 편집기">
+    <div class="pane-header"><div><span class="dot green"></span><strong>Console</strong><span class="muted small">HTTP / JSON</span></div><select id="clusterSelect" aria-label="실행 클러스터"><option value="cluster1">cluster1 · 3 nodes</option><option value="cluster2">cluster2 · 1 node</option></select></div>
+    <div class="editor-tools"><button id="runBtn" class="primary" disabled><span class="play">▶</span> 현재 요청 실행 <kbd>⌘ ↵</kbd></button><button id="runAllBtn" class="outline" disabled>전체 실행</button><button id="copyBtn" class="icon-btn" title="코드 복사" aria-label="코드 복사">⧉</button></div>
+    <div class="editor-shell"><div id="gutter" class="gutter" aria-hidden="true">1</div><div class="code-wrap"><pre id="syntax" class="syntax" aria-hidden="true"></pre><textarea id="editor" aria-label="Elasticsearch 요청 코드" spellcheck="false" autocapitalize="off" autocorrect="off" wrap="off"></textarea></div></div>
+    <div class="editor-footer"><span id="cursorPos">Ln 1, Col 1</span><span id="saveState"><span class="dot green"></span> 자동 저장</span><span>선택 영역 · 현재 요청 실행</span></div>
+    <div class="execution-note">요청은 실제 Elasticsearch에서 실행됩니다. <code>PUT</code> · <code>POST</code> · <code>DELETE</code>는 실습 데이터를 변경할 수 있습니다.</div>
+  </section>
+  <section class="result-pane" aria-label="실행 결과">
+    <div class="pane-header"><div class="result-tabs"><button class="tab active" data-tab="result">실행 결과</button><button class="tab" data-tab="checks">검증</button><button class="tab" data-tab="history">기록</button></div><button id="checkBtn" class="check-btn" disabled>답안 검증 ✓</button></div>
+    <div id="resultTab" class="tab-content"><div id="responseList" class="response-list"></div><div id="resultMeta" class="result-meta" hidden></div><pre id="resultCode" class="result-code" hidden></pre><div id="resultEmpty" class="empty-state"><div class="empty-icon">{ }</div><h3>직접 실행하며 확인하세요</h3><p>왼쪽에서 문제를 읽고 Console에 요청을 작성하세요.<br>실행하면 실제 응답 JSON과 오류가 이곳에 표시됩니다.</p><div class="shortcut-hint"><kbd>⌘</kbd> + <kbd>Enter</kbd><span>현재 요청</span></div><span class="small muted">Windows / Linux에서는 Ctrl + Enter</span></div></div>
+    <div id="checksTab" class="tab-content" hidden><div id="checksContent" class="checks-content"><div class="empty-state"><div class="empty-icon">✓</div><h3>조건을 하나씩 검증합니다</h3><p>검색 결과, 매핑과 설정을 실제 클러스터에서 확인합니다.<br>공식 채점기가 아닌 연습용 검증입니다.</p></div></div></div>
+    <div id="historyTab" class="tab-content" hidden><div id="historyContent" class="history-content"></div></div>
+    <div class="result-footer"><span id="engineIndicator" class="muted">● 연결 확인 중</span><span>모의 응답이 아닌 실제 API 결과</span></div>
+  </section>
+</main>
+<dialog id="modal"><div class="modal-header"><h2 id="modalTitle"></h2><button id="closeModal" class="icon-btn" aria-label="닫기">×</button></div><div id="modalBody" class="modal-body"></div><div id="modalFooter" class="modal-footer"></div></dialog>
+<div id="toast" class="toast" role="status" hidden></div><input type="file" id="importFile" accept="application/json" hidden>
+</body>
+</html>

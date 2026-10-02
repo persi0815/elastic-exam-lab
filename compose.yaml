@@ -1,0 +1,190 @@
+name: ece-exam-lab-v2
+
+x-es-env: &es-env
+  ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-ExamLab2026}
+  ES_JAVA_OPTS: -Xms512m -Xmx512m
+  network.host: 0.0.0.0
+  http.port: 9200
+  node.store.allow_mmap: "false"
+  xpack.security.enabled: "true"
+  xpack.security.enrollment.enabled: "false"
+  xpack.security.autoconfiguration.enabled: "false"
+  xpack.security.http.ssl.enabled: "false"
+  xpack.security.transport.ssl.enabled: "true"
+  xpack.security.transport.ssl.verification_mode: certificate
+  xpack.security.transport.ssl.keystore.path: certs/transport.p12
+  xpack.security.transport.ssl.truststore.path: certs/transport.p12
+  xpack.license.self_generated.type: trial
+  xpack.ml.enabled: "false"
+  ingest.geoip.downloader.enabled: "false"
+  stack.templates.enabled: "false"
+  path.repo: /mnt/elastic-snapshots
+
+x-es-common: &es-common
+  image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:-9.3.8}
+  restart: unless-stopped
+  mem_limit: 1536m
+  ulimits:
+    nofile:
+      soft: 65535
+      hard: 65535
+  depends_on:
+    setup:
+      condition: service_completed_successfully
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS -u elastic:$$ELASTIC_PASSWORD http://localhost:9200/_cluster/health > /dev/null"]
+    interval: 10s
+    timeout: 5s
+    retries: 60
+    start_period: 60s
+
+services:
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION:-9.3.8}
+    user: "0"
+    entrypoint: ["bash", "/setup.sh"]
+    volumes:
+      - ./infra/setup.sh:/setup.sh:ro
+      - certs:/usr/share/elasticsearch/config/certs
+      - snapshots1:/snapshots/cluster1
+      - snapshots2:/snapshots/cluster2
+
+  es01:
+    <<: *es-common
+    environment:
+      <<: *es-env
+      cluster.name: ece-lab-cluster1
+      node.name: node1
+      node.roles: master,data_hot,data_content,ingest,remote_cluster_client
+      discovery.seed_hosts: es01:9300,es02:9300,es03:9300
+      cluster.initial_master_nodes: node1,node2,node3
+      transport.port: 9300
+    ports: ["127.0.0.1:${CLUSTER1_PORT:-19200}:9200"]
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs:ro
+      - esdata1:/usr/share/elasticsearch/data
+      - snapshots1:/mnt/elastic-snapshots
+
+  es02:
+    <<: *es-common
+    environment:
+      <<: *es-env
+      cluster.name: ece-lab-cluster1
+      node.name: node2
+      node.roles: master,data_hot,data_content,data_warm,ingest,remote_cluster_client
+      discovery.seed_hosts: es01:9300,es02:9300,es03:9300
+      cluster.initial_master_nodes: node1,node2,node3
+      transport.port: 9300
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs:ro
+      - esdata2:/usr/share/elasticsearch/data
+      - snapshots1:/mnt/elastic-snapshots
+
+  es03:
+    <<: *es-common
+    environment:
+      <<: *es-env
+      cluster.name: ece-lab-cluster1
+      node.name: node3
+      node.roles: master,data_hot,data_content,data_cold,ingest,remote_cluster_client
+      discovery.seed_hosts: es01:9300,es02:9300,es03:9300
+      cluster.initial_master_nodes: node1,node2,node3
+      transport.port: 9300
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs:ro
+      - esdata3:/usr/share/elasticsearch/data
+      - snapshots1:/mnt/elastic-snapshots
+
+  server4:
+    <<: *es-common
+    environment:
+      <<: *es-env
+      cluster.name: ece-lab-cluster2
+      node.name: server4
+      node.roles: master,data,ingest,remote_cluster_client
+      discovery.type: single-node
+      transport.port: 9304
+    ports: ["127.0.0.1:${CLUSTER2_PORT:-19201}:9200"]
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs:ro
+      - esdata4:/usr/share/elasticsearch/data
+      - snapshots2:/mnt/elastic-snapshots
+
+  app:
+    build: .
+    restart: unless-stopped
+    mem_limit: 384m
+    depends_on:
+      es01: {condition: service_started}
+      es02: {condition: service_started}
+      es03: {condition: service_started}
+      server4: {condition: service_started}
+    environment:
+      CLUSTER1_URL: http://es01:9200
+      CLUSTER2_URL: http://server4:9200
+      CLUSTER1_NAME: ece-lab-cluster1
+      CLUSTER2_NAME: ece-lab-cluster2
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-ExamLab2026}
+      KIBANA_PASSWORD: ${KIBANA_PASSWORD:-KibanaLab2026}
+      KIBANA1_URL: http://kibana1:5601
+      KIBANA2_URL: http://kibana2:5601
+    ports: ["127.0.0.1:${LAB_PORT:-8787}:8787"]
+    volumes:
+      - appstate:/opt/lab/state
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8787/api/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  kibana1:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-9.3.8}
+    restart: unless-stopped
+    mem_limit: 2g
+    depends_on:
+      es01: {condition: service_healthy}
+      app: {condition: service_healthy}
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-ExamLab2026}
+      KIBANA_PASSWORD: ${KIBANA_PASSWORD:-KibanaLab2026}
+      NODE_OPTIONS: --max-old-space-size=1024
+    volumes:
+      - ./infra/kibana1.yml:/usr/share/kibana/config/kibana.yml:ro
+    ports: ["127.0.0.1:${KIBANA1_PORT:-15601}:5601"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u elastic:$$ELASTIC_PASSWORD http://localhost:5601/kibana1/api/status >/dev/null"]
+      interval: 15s
+      timeout: 8s
+      retries: 50
+      start_period: 120s
+
+  kibana2:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION:-9.3.8}
+    restart: unless-stopped
+    mem_limit: 2g
+    depends_on:
+      server4: {condition: service_healthy}
+      app: {condition: service_healthy}
+    environment:
+      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-ExamLab2026}
+      KIBANA_PASSWORD: ${KIBANA_PASSWORD:-KibanaLab2026}
+      NODE_OPTIONS: --max-old-space-size=1024
+    volumes:
+      - ./infra/kibana2.yml:/usr/share/kibana/config/kibana.yml:ro
+    ports: ["127.0.0.1:${KIBANA2_PORT:-15602}:5601"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u elastic:$$ELASTIC_PASSWORD http://localhost:5601/kibana2/api/status >/dev/null"]
+      interval: 15s
+      timeout: 8s
+      retries: 50
+      start_period: 120s
+
+volumes:
+  certs:
+  esdata1:
+  esdata2:
+  esdata3:
+  esdata4:
+  snapshots1:
+  snapshots2:
+  appstate:

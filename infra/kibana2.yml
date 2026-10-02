@@ -1,0 +1,24 @@
+# LOCAL TRAINING ONLY. Anonymous full-admin access is intentional in this isolated lab.
+server.name: ece-kibana2
+server.host: "0.0.0.0"
+server.basePath: "/kibana2"
+server.rewriteBasePath: true
+server.securityResponseHeaders.disableEmbedding: true
+elasticsearch.hosts: ["http://server4:9200"]
+elasticsearch.username: "kibana_system"
+elasticsearch.password: "${KIBANA_PASSWORD}"
+elasticsearch.requestTimeout: 180000
+xpack.security.encryptionKey: "ece-v2-kibana2-security-01234567890123456789"
+xpack.encryptedSavedObjects.encryptionKey: "ece-v2-kibana2-objects-01234567890123456789"
+xpack.reporting.encryptionKey: "ece-v2-kibana2-reporting-01234567890123456789"
+xpack.security.authc.providers:
+  anonymous.lab_anonymous:
+    order: 0
+    credentials:
+      username: "elastic"
+      password: "${ELASTIC_PASSWORD}"
+telemetry.enabled: false
+telemetry.optIn: false
+
+# Explicitly support Basic headers for health checks / local test scripts.
+xpack.security.authc.http.schemes: [apikey, bearer, basic]

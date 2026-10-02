@@ -1,0 +1,84 @@
+test_all_reference_solutions_parse (test_core.CatalogTests.test_all_reference_solutions_parse) ... ok
+test_boundaries_and_paginations (test_core.CatalogTests.test_boundaries_and_paginations) ... ok
+test_fixture_counts (test_core.CatalogTests.test_fixture_counts) ... ok
+test_missing_reference_values (test_core.CatalogTests.test_missing_reference_values) ... ok
+test_primary_count_one_for_aggregations (test_core.CatalogTests.test_primary_count_one_for_aggregations) ... ok
+test_question_counts (test_core.CatalogTests.test_question_counts) ... ok
+test_reconstruction_labels (test_core.CatalogTests.test_reconstruction_labels) ... ok
+test_referenced_datasets_exist (test_core.CatalogTests.test_referenced_datasets_exist) ... ok
+test_source_pdfs_exist (test_core.CatalogTests.test_source_pdfs_exist) ... ok
+test_unique_fixture_doc_ids (test_core.CatalogTests.test_unique_fixture_doc_ids) ... ok
+test_unique_ids (test_core.CatalogTests.test_unique_ids) ... ok
+test_aggregation_names_are_ignored (test_core.CheckHelperTests.test_aggregation_names_are_ignored) ... ok
+test_duration (test_core.CheckHelperTests.test_duration) ... ok
+test_float_tolerance (test_core.CheckHelperTests.test_float_tolerance) ... ok
+test_sort_defaults (test_core.CheckHelperTests.test_sort_defaults) ... ok
+test_catalog_does_not_ship_solutions (test_core.HTTPContractTests.test_catalog_does_not_ship_solutions) ... [01:39:49] "GET /api/catalog HTTP/1.1" 200 -
+ok
+test_control_index_protected (test_core.HTTPContractTests.test_control_index_protected) ... [01:39:49] "POST /api/execute HTTP/1.1" 200 -
+ok
+test_cross_origin_blocked (test_core.HTTPContractTests.test_cross_origin_blocked) ... [01:39:49] "POST /api/execute HTTP/1.1" 403 -
+ok
+test_global_delete_protected (test_core.HTTPContractTests.test_global_delete_protected) ... [01:39:49] "POST /api/execute HTTP/1.1" 200 -
+ok
+test_history_persists (test_core.HTTPContractTests.test_history_persists) ... [01:39:49] "POST /api/execute HTTP/1.1" 200 -
+[01:39:49] "POST /api/history HTTP/1.1" 200 -
+ok
+test_json_error_no_upstream_call (test_core.HTTPContractTests.test_json_error_no_upstream_call) ... [01:39:49] "POST /api/execute HTTP/1.1" 400 -
+ok
+test_reset_confirmation_required (test_core.HTTPContractTests.test_reset_confirmation_required) ... [01:39:49] "POST /api/reset HTTP/1.1" 400 -
+ok
+test_selected_cluster_routing (test_core.HTTPContractTests.test_selected_cluster_routing) ... [01:39:49] "POST /api/execute HTTP/1.1" 200 -
+ok
+test_source_pdf_served (test_core.HTTPContractTests.test_source_pdf_served) ... [01:39:49] "GET /sources/recall-2026-02-26.pdf HTTP/1.1" 200 -
+ok
+test_stop_on_upstream_error (test_core.HTTPContractTests.test_stop_on_upstream_error) ... [01:39:49] "POST /api/execute HTTP/1.1" 200 -
+ok
+test_wrong_set_rejected (test_core.HTTPContractTests.test_wrong_set_rejected) ... [01:39:49] "POST /api/execute HTTP/1.1" 409 -
+ok
+test_refuses_unmarked_nonempty_cluster (test_core.OwnershipTests.test_refuses_unmarked_nonempty_cluster) ... ok
+test_refuses_wrong_cluster (test_core.OwnershipTests.test_refuses_wrong_cluster) ... ok
+test_bulk (test_core.ParserTests.test_bulk) ... ok
+test_comments (test_core.ParserTests.test_comments) ... ok
+test_duplicate_key (test_core.ParserTests.test_duplicate_key) ... ok
+test_enrich_put_is_accepted (test_core.ParserTests.test_enrich_put_is_accepted) ... ok
+test_error_messages (test_core.ParserTests.test_error_messages) ... ok
+test_head_delete_no_body (test_core.ParserTests.test_head_delete_no_body) ... ok
+test_header_inside_script_not_split (test_core.ParserTests.test_header_inside_script_not_split) ... ok
+test_maximum_request_count (test_core.ParserTests.test_maximum_request_count) ... ok
+test_multiple_requests (test_core.ParserTests.test_multiple_requests) ... ok
+test_remote_cluster_alias (test_core.ParserTests.test_remote_cluster_alias) ... ok
+test_triple_quote_painless (test_core.ParserTests.test_triple_quote_painless) ... ok
+test_unsafe_paths (test_core.ParserTests.test_unsafe_paths) ... ok
+test_url_inside_body (test_core.ParserTests.test_url_inside_body) ... ok
+test_wildcard_remote (test_core.ParserTests.test_wildcard_remote) ... ok
+test_autocomplete_not_captured (test_v2.ConsoleCaptureTests.test_autocomplete_not_captured) ... ok
+test_bulk_kept_as_raw (test_v2.ConsoleCaptureTests.test_bulk_kept_as_raw) ... ok
+test_cluster_two_cookie (test_v2.ConsoleCaptureTests.test_cluster_two_cookie) ... ok
+test_extract_nested_knn_body (test_v2.ConsoleCaptureTests.test_extract_nested_knn_body) ... ok
+test_known_prefix_only (test_v2.ConsoleCaptureTests.test_known_prefix_only) ... ok
+test_cross_origin_post_rejected (test_v2.NativeProxyTests.test_cross_origin_post_rejected) ... ok
+test_gzip_bundle (test_v2.NativeProxyTests.test_gzip_bundle) ... ok
+test_native_execution_capture (test_v2.NativeProxyTests.test_native_execution_capture) ... ok
+test_preserve_basepath_and_headers (test_v2.NativeProxyTests.test_preserve_basepath_and_headers) ... ok
+test_article_to_exact_count (test_v2.SeptemberDataTests.test_article_to_exact_count) ... ok
+test_bool_pagination_has_both_featured_values (test_v2.SeptemberDataTests.test_bool_pagination_has_both_featured_values) ... ok
+test_conflicts_are_explicit (test_v2.SeptemberDataTests.test_conflicts_are_explicit) ... ok
+test_d9_pipeline_format (test_v2.SeptemberDataTests.test_d9_pipeline_format) ... ok
+test_empty_ingest_index (test_v2.SeptemberDataTests.test_empty_ingest_index) ... ok
+test_every_article_has_reference (test_v2.SeptemberDataTests.test_every_article_has_reference) ... ok
+test_knn_filter_has_enough_candidates (test_v2.SeptemberDataTests.test_knn_filter_has_enough_candidates) ... ok
+test_months_have_values (test_v2.SeptemberDataTests.test_months_have_values) ... ok
+test_native_default_both_configured (test_v2.SeptemberDataTests.test_native_default_both_configured) ... ok
+test_native_editor_not_overlay (test_v2.SeptemberDataTests.test_native_editor_not_overlay) ... ok
+test_no_d9_index_recreate (test_v2.SeptemberDataTests.test_no_d9_index_recreate) ... ok
+test_preserved_references (test_v2.SeptemberDataTests.test_preserved_references) ... ok
+test_same_origin_basepaths_and_http_auth (test_v2.SeptemberDataTests.test_same_origin_basepaths_and_http_auth) ... ok
+test_subsets_account_for_es_defaults (test_v2.SeptemberDataTests.test_subsets_account_for_es_defaults) ... ok
+test_vector_dimensions (test_v2.SeptemberDataTests.test_vector_dimensions) ... ok
+test_vector_source_preserved (test_v2.SeptemberDataTests.test_vector_source_preserved) ... ok
+
+----------------------------------------------------------------------
+Ran 67 tests in 1.167s
+
+OK
